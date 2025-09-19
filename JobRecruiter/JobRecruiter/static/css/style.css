@@ -1,0 +1,30 @@
+.bg-index {
+    background: url("/static/img/JobRecruiter.jpg") no-repeat center center fixed;
+    background-size: cover;
+    min-height: 10vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.masthead {
+    width: 100%;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Info page specific image styling */
+.info-page img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
