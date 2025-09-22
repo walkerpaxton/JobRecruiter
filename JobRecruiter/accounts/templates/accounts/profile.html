@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if template_data.is_editing %}
+                <!-- EDIT MODE -->
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">
+                            <i class="fas fa-user-edit"></i> Edit Your Profile
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <!-- Personal Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-user"></i> Personal Information</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="fullName" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="fullName" name="full_name" value="{{ template_data.profile.full_name }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="preferredName" class="form-label">Preferred Name</label>
+                                    <input type="text" class="form-control" id="preferredName" name="preferred_name" value="{{ template_data.profile.preferred_name }}">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="location" class="form-label">Location *</label>
+                                    <input type="text" class="form-control" id="location" name="location" value="{{ template_data.profile.location }}" placeholder="City, State/Country" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" value="{{ template_data.profile.phone }}">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email *</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ template_data.profile.user.email }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="linkedin" class="form-label">LinkedIn Profile</label>
+                                    <input type="url" class="form-control" id="linkedin" name="linkedin" value="{{ template_data.profile.linkedin }}" placeholder="https://linkedin.com/in/yourprofile">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="profilePicture" class="form-label">Profile Picture</label>
+                                    <input type="file" class="form-control" id="profilePicture" name="profile_picture" accept="image/*">
+                                </div>
+                            </div>
+                            
+                            <!-- Professional Summary -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Professional Summary</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="summary" class="form-label">Professional Summary *</label>
+                                    <textarea class="form-control" id="summary" name="summary" rows="4" placeholder="Tell employers about yourself, your experience, and what makes you unique..." required>{{ template_data.profile.summary }}</textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Skills -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-tools"></i> Skills</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="technicalSkills" class="form-label">Technical Skills</label>
+                                    <textarea class="form-control" id="technicalSkills" name="technical_skills" rows="3" placeholder="e.g., Python, JavaScript, React, SQL, AWS, etc.">{{ template_data.profile.technical_skills }}</textarea>
+                                    <div class="form-text">Separate skills with commas</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="softSkills" class="form-label">Soft Skills</label>
+                                    <textarea class="form-control" id="softSkills" name="soft_skills" rows="2" placeholder="e.g., Leadership, Communication, Problem Solving, Teamwork, etc.">{{ template_data.profile.soft_skills }}</textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Education -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-graduation-cap"></i> Education</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="degree" class="form-label">Degree/Qualification</label>
+                                    <input type="text" class="form-control" id="degree" name="degree" value="{{ template_data.profile.degree }}" placeholder="e.g., Bachelor of Computer Science">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="institution" class="form-label">Institution</label>
+                                    <input type="text" class="form-control" id="institution" name="institution" value="{{ template_data.profile.institution }}" placeholder="University/College name">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="graduationYear" class="form-label">Graduation Year</label>
+                                    <input type="number" class="form-control" id="graduationYear" name="graduation_year" value="{{ template_data.profile.graduation_year }}" min="1950" max="2030">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gpa" class="form-label">GPA (Optional)</label>
+                                    <input type="number" class="form-control" id="gpa" name="gpa" value="{{ template_data.profile.gpa }}" step="0.01" min="0" max="4">
+                                </div>
+                            </div>
+                            
+                            <!-- Work Experience -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Work Experience</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="currentJob" class="form-label">Current/Previous Job Title</label>
+                                    <input type="text" class="form-control" id="currentJob" name="current_job" value="{{ template_data.profile.current_job }}" placeholder="e.g., Software Developer">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="company" class="form-label">Company</label>
+                                    <input type="text" class="form-control" id="company" name="company" value="{{ template_data.profile.company }}" placeholder="Company name">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="experienceYears" class="form-label">Years of Experience</label>
+                                    <select class="form-select" id="experienceYears" name="experience_years">
+                                        <option value="">Select experience level</option>
+                                        <option value="0-1" {% if template_data.profile.experience_years == "0-1" %}selected{% endif %}>0-1 years</option>
+                                        <option value="1-3" {% if template_data.profile.experience_years == "1-3" %}selected{% endif %}>1-3 years</option>
+                                        <option value="3-5" {% if template_data.profile.experience_years == "3-5" %}selected{% endif %}>3-5 years</option>
+                                        <option value="5-10" {% if template_data.profile.experience_years == "5-10" %}selected{% endif %}>5-10 years</option>
+                                        <option value="10+" {% if template_data.profile.experience_years == "10+" %}selected{% endif %}>10+ years</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="availability" class="form-label">Availability</label>
+                                    <select class="form-select" id="availability" name="availability">
+                                        <option value="">Select availability</option>
+                                        <option value="immediate" {% if template_data.profile.availability == "immediate" %}selected{% endif %}>Immediate</option>
+                                        <option value="2-weeks" {% if template_data.profile.availability == "2-weeks" %}selected{% endif %}>2 weeks notice</option>
+                                        <option value="1-month" {% if template_data.profile.availability == "1-month" %}selected{% endif %}>1 month notice</option>
+                                        <option value="flexible" {% if template_data.profile.availability == "flexible" %}selected{% endif %}>Flexible</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Information -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary border-bottom pb-2"><i class="fas fa-plus-circle"></i> Additional Information</h5>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="languages" class="form-label">Languages</label>
+                                    <input type="text" class="form-control" id="languages" name="languages" value="{{ template_data.profile.languages }}" placeholder="e.g., English (Native), Spanish (Fluent), French (Basic)">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="certifications" class="form-label">Certifications</label>
+                                    <textarea class="form-control" id="certifications" name="certifications" rows="2" placeholder="List any professional certifications you have">{{ template_data.profile.certifications }}</textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="portfolio" class="form-label">Portfolio/Website</label>
+                                    <input type="url" class="form-control" id="portfolio" name="portfolio" value="{{ template_data.profile.portfolio }}" placeholder="https://yourportfolio.com">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="salaryExpectation" class="form-label">Salary Expectation (Optional)</label>
+                                    <input type="text" class="form-control" id="salaryExpectation" name="salary_expectation" value="{{ template_data.profile.salary_expectation }}" placeholder="e.g., $50,000 - $70,000">
+                                </div>
+                            </div>
+                            
+                            <!-- Submit Button -->
+                            <div class="row">
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                                        <i class="fas fa-save"></i> Save Profile
+                                    </button>
+                                    <a href="{% url 'accounts.profile' %}" class="btn btn-secondary btn-lg px-5 ms-2">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <!-- VIEW MODE -->
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">
+                            <i class="fas fa-user"></i> My Profile
+                        </h3>
+                        <a href="{% url 'accounts.edit_profile' %}" class="btn btn-light">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <!-- Profile Picture and Basic Info -->
+                        <div class="row mb-4">
+                            <div class="col-md-3 text-center">
+                                {% if template_data.profile.profile_picture %}
+                                    <img src="{{ template_data.profile.profile_picture.url }}" alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 150px; height: 150px; margin: 0 auto;">
+                                        <i class="fas fa-user fa-3x text-white"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-9">
+                                <h2 class="mb-1">{{ template_data.profile.full_name }}</h2>
+                                {% if template_data.profile.preferred_name %}
+                                    <p class="text-muted mb-2">Preferred Name: {{ template_data.profile.preferred_name }}</p>
+                                {% endif %}
+                                <p class="mb-2"><i class="fas fa-map-marker-alt text-primary"></i> {{ template_data.profile.location }}</p>
+                                <p class="mb-2"><i class="fas fa-envelope text-primary"></i> {{ template_data.profile.user.email }}</p>
+                                {% if template_data.profile.phone %}
+                                    <p class="mb-2"><i class="fas fa-phone text-primary"></i> {{ template_data.profile.phone }}</p>
+                                {% endif %}
+                                {% if template_data.profile.linkedin %}
+                                    <p class="mb-2"><i class="fab fa-linkedin text-primary"></i> <a href="{{ template_data.profile.linkedin }}" target="_blank">LinkedIn Profile</a></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Professional Summary -->
+                        {% if template_data.profile.summary %}
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Professional Summary</h5>
+                            <p class="lead">{{ template_data.profile.summary }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Skills -->
+                        {% if template_data.profile.technical_skills or template_data.profile.soft_skills %}
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-tools"></i> Skills</h5>
+                            {% if template_data.profile.technical_skills %}
+                                <h6>Technical Skills:</h6>
+                                <p>{{ template_data.profile.technical_skills }}</p>
+                            {% endif %}
+                            {% if template_data.profile.soft_skills %}
+                                <h6>Soft Skills:</h6>
+                                <p>{{ template_data.profile.soft_skills }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Education -->
+                        {% if template_data.profile.degree or template_data.profile.institution %}
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-graduation-cap"></i> Education</h5>
+                            {% if template_data.profile.degree %}
+                                <p><strong>Degree:</strong> {{ template_data.profile.degree }}</p>
+                            {% endif %}
+                            {% if template_data.profile.institution %}
+                                <p><strong>Institution:</strong> {{ template_data.profile.institution }}</p>
+                            {% endif %}
+                            {% if template_data.profile.graduation_year %}
+                                <p><strong>Graduation Year:</strong> {{ template_data.profile.graduation_year }}</p>
+                            {% endif %}
+                            {% if template_data.profile.gpa %}
+                                <p><strong>GPA:</strong> {{ template_data.profile.gpa }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Work Experience -->
+                        {% if template_data.profile.current_job or template_data.profile.company %}
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Work Experience</h5>
+                            {% if template_data.profile.current_job %}
+                                <p><strong>Current/Previous Job:</strong> {{ template_data.profile.current_job }}</p>
+                            {% endif %}
+                            {% if template_data.profile.company %}
+                                <p><strong>Company:</strong> {{ template_data.profile.company }}</p>
+                            {% endif %}
+                            {% if template_data.profile.experience_years %}
+                                <p><strong>Experience:</strong> {{ template_data.profile.experience_years }}</p>
+                            {% endif %}
+                            {% if template_data.profile.availability %}
+                                <p><strong>Availability:</strong> {{ template_data.profile.availability }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Additional Information -->
+                        {% if template_data.profile.languages or template_data.profile.certifications or template_data.profile.portfolio or template_data.profile.salary_expectation %}
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-plus-circle"></i> Additional Information</h5>
+                            {% if template_data.profile.languages %}
+                                <p><strong>Languages:</strong> {{ template_data.profile.languages }}</p>
+                            {% endif %}
+                            {% if template_data.profile.certifications %}
+                                <p><strong>Certifications:</strong> {{ template_data.profile.certifications }}</p>
+                            {% endif %}
+                            {% if template_data.profile.portfolio %}
+                                <p><strong>Portfolio:</strong> <a href="{{ template_data.profile.portfolio }}" target="_blank">{{ template_data.profile.portfolio }}</a></p>
+                            {% endif %}
+                            {% if template_data.profile.salary_expectation %}
+                                <p><strong>Salary Expectation:</strong> {{ template_data.profile.salary_expectation }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Empty State -->
+                        {% if not template_data.profile.summary and not template_data.profile.technical_skills and not template_data.profile.degree and not template_data.profile.current_job %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Complete Your Profile</h4>
+                            <p class="text-muted">Add your information to make your profile stand out to employers.</p>
+                            <a href="{% url 'accounts.edit_profile' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Information
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.text-primary {
+    color: #0d6efd !important;
+}
+
+.border-bottom {
+    border-bottom: 2px solid #0d6efd !important;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #0d6efd, #6610f2);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(45deg, #0b5ed7, #5a0fc8);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+</style>
+{% endblock content %}
