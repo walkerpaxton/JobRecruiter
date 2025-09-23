@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-4">
-	<a href="{% url 'jobpostings.list' %}" class="btn btn-link">← Back to Jobs</a>
+	<a href="{% url 'jobpostings:list' %}" class="btn btn-link">← Back to Jobs</a>
 	<div class="card mt-2">
 		<div class="card-body">
 			<h3 class="card-title">{{ job.title }}</h3>

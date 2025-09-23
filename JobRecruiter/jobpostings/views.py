@@ -27,7 +27,7 @@ def job_create_view(request):
 
     if profile.account_type != 'employer':
         messages.error(request, 'Only employers can post jobs.')
-        return redirect('jobpostings.list')
+        return redirect('jobpostings:list')
 
     if request.method == 'POST':
         form = JobPostingForm(request.POST)
@@ -36,8 +36,26 @@ def job_create_view(request):
             job.posted_by = request.user
             job.save()
             messages.success(request, 'Job posted successfully!')
-            return redirect(reverse('jobpostings.detail', args=[job.id]))
+            return redirect(reverse('jobpostings:detail', args=[job.id]))
     else:
         form = JobPostingForm()
 
     return render(request, 'jobpostings/job_create.html', {'form': form})
+
+@login_required
+def job_edit_view(request, job_id: int):
+    job = get_object_or_404(JobPosting, id=job_id, is_active=True)
+    if job.posted_by != request.user:
+        messages.error(request, 'You are not authorized to edit this job.')
+        return redirect('jobpostings:list')
+    
+    if request.method == 'POST':
+        form = JobPostingForm(request.POST, instance=job)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Job updated successfully!')
+            return redirect(reverse('jobpostings:detail', args=[job.id]))
+    else:
+        form = JobPostingForm(instance=job)
+    
+    return render(request, 'jobpostings/edit_job.html', {'form': form, 'job': job})
