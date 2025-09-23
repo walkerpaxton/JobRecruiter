@@ -153,3 +153,4 @@ staticfiles/
 static_root/
 
 accounts/pychache
+db.sqlite3
