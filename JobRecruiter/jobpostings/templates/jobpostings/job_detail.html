@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+	<a href="{% url 'jobpostings.list' %}" class="btn btn-link">← Back to Jobs</a>
+	<div class="card mt-2">
+		<div class="card-body">
+			<h3 class="card-title">{{ job.title }}</h3>
+			<h5 class="card-subtitle mb-2 text-muted">{{ job.company_name }} — {{ job.location }}</h5>
+			<p class="mb-1"><strong>Employment Type:</strong> {{ job.get_employment_type_display }}</p>
+			<p class="mb-1"><strong>Pay Range:</strong> {{ job.pay_range_display }}</p>
+			<hr />
+			<h6>Description</h6>
+			<p>{{ job.description|linebreaks }}</p>
+			{% if job.benefits %}
+			<h6>Benefits</h6>
+			<p>{{ job.benefits|linebreaks }}</p>
+			{% endif %}
+			<hr />
+			<h6>How to Apply</h6>
+			{% if job.application_url %}
+			<p><a href="{{ job.application_url }}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Apply on Company Site</a></p>
+			{% elif job.application_email %}
+			<p>Email your application to <a href="mailto:{{ job.application_email }}">{{ job.application_email }}</a></p>
+			{% else %}
+			<p>Please contact the employer for application instructions.</p>
+			{% endif %}
+			<p class="text-muted mt-3"><small>Posted on {{ job.created_at|date:"M d, Y" }}</small></p>
+		</div>
+	</div>
+</div>
+{% endblock content %} 

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+	<h3>Post a Job</h3>
+	<form method="post" novalidate>
+		{% csrf_token %}
+		<div class="row g-3">
+			<div class="col-md-6">{{ form.company_name.label_tag }} {{ form.company_name }}</div>
+			<div class="col-md-6">{{ form.title.label_tag }} {{ form.title }}</div>
+			<div class="col-md-6">{{ form.location.label_tag }} {{ form.location }}</div>
+			<div class="col-md-3">{{ form.pay_min.label_tag }} {{ form.pay_min }}</div>
+			<div class="col-md-3">{{ form.pay_max.label_tag }} {{ form.pay_max }}</div>
+			<div class="col-md-3">{{ form.currency.label_tag }} {{ form.currency }}</div>
+			<div class="col-md-3">{{ form.employment_type.label_tag }} {{ form.employment_type }}</div>
+			<div class="col-12">{{ form.description.label_tag }} {{ form.description }}</div>
+			<div class="col-12">{{ form.benefits.label_tag }} {{ form.benefits }}</div>
+			<div class="col-md-6">{{ form.application_url.label_tag }} {{ form.application_url }}</div>
+			<div class="col-md-6">{{ form.application_email.label_tag }} {{ form.application_email }}</div>
+		</div>
+		<div class="mt-3">
+			<button type="submit" class="btn btn-primary">Publish Job</button>
+			<a href="{% url 'jobpostings.list' %}" class="btn btn-outline-secondary">Cancel</a>
+		</div>
+	</form>
+</div>
+{% endblock content %} 
