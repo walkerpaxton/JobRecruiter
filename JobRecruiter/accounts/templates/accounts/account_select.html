@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container text-center">
+  <h2>Choose Your Account Type</h2>
+  <p>Welcome, {{ user.username }}! Please select how you'd like to use our platform.</p>
+  
+  <form method="post">
+    {% csrf_token %}
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Job Seeker</h5>
+                    <p class="card-text">Create a profile to showcase your skills and find your next role.</p>
+                    <input type="radio" class="btn-check" name="account_type" id="jobseeker" value="jobseeker" autocomplete="off" required>
+                    <label class="btn btn-outline-primary" for="jobseeker">I am a Job Seeker</label>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Employer</h5>
+                    <p class="card-text">Create a company profile to post jobs and find qualified candidates.</p>
+                    <input type="radio" class="btn-check" name="account_type" id="employer" value="employer" autocomplete="off" required>
+                    <label class="btn btn-outline-primary" for="employer">I am an Employer</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-success btn-lg mt-4">Continue</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,101 +1,172 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
-from .forms import CustomUserCreationForm, CustomErrorList
-from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from .models import Profile
 from django.contrib import messages
 
-def signup(request):
-    template_data = {}
-    template_data['title'] = 'Sign Up'
-    if request.method == 'GET':
-        template_data['form'] = CustomUserCreationForm()
-        return render(request, 'accounts/signup.html', {'template_data': template_data})
-    elif request.method == 'POST':
+# --- Import our new forms and models ---
+from .forms import CustomUserCreationForm, CustomErrorList, JobSeekerProfileForm, EmployerProfileForm
+from .models import Profile, JobSeekerProfile, EmployerProfile
+
+# --- User Authentication Views ---
+
+def signup_view(request):
+    """
+    Handles user registration using the custom form.
+    On success, it logs the user in and redirects, letting the middleware
+    send them to the account selection page.
+    """
+    if request.method == 'POST':
         form = CustomUserCreationForm(request.POST, error_class=CustomErrorList)
         if form.is_valid():
-            form.save()
-            return redirect('accounts.login')
-        else:
-            template_data['form'] = form
-            return render(request, 'accounts/signup.html', {'template_data': template_data})
-        
-def login(request):
-    template_data = {}
-    template_data['title'] = 'Login'
-    if request.method == 'GET': 
-        return render(request, 'accounts/login.html', {'template_data': template_data})
-    elif request.method == 'POST':
-        user = authenticate(request, username = request.POST['username'],
-                            password = request.POST['password']
-                            )
-        if user is None:
-            template_data['error'] = 'The username or password is incorrect.'
-            return render(request, 'accounts/login.html',
-                          {'template_data': template_data})
-        else: 
+            user = form.save()
+            auth_login(request, user) # Log the user in automatically
+            return redirect('accounts.account_select') # Redirect to choose account type
+    else:
+        form = CustomUserCreationForm(error_class=CustomErrorList)
+    
+    return render(request, 'accounts/signup.html', {'form': form, 'title': 'Sign Up'})
+
+def login_view(request):
+    """
+    Handles user login.
+    """
+    if request.method == 'POST':
+        user = authenticate(request, username=request.POST['username'], password=request.POST['password'])
+        if user is not None:
             auth_login(request, user)
-            return redirect('home.index')
+            return redirect('home.index') # Redirect to home, middleware will intercept if needed
+        else:
+            messages.error(request, 'The username or password was incorrect.')
+            return render(request, 'accounts/login.html', {'title': 'Login'})
+    
+    return render(request, 'accounts/login.html', {'title': 'Login'})
+
 @login_required
-def logout(request):
+def logout_view(request):
+    """
+    Logs the user out.
+    """
     auth_logout(request)
     return redirect('home.index')
 
-@login_required
-def profile(request):
-    template_data = {}
-    template_data['title'] = 'Profile'
-    
-    # Get or create profile for the current user
-    profile, created = Profile.objects.get_or_create(user=request.user)
-    template_data['profile'] = profile
-    template_data['is_editing'] = False
-    
-    return render(request, 'accounts/profile.html', {'template_data': template_data})
+# --- Profile Creation and Management Views ---
 
 @login_required
-def edit_profile(request):
-    template_data = {}
-    template_data['title'] = 'Edit Profile'
-    
-    # Get or create profile for the current user
-    profile, created = Profile.objects.get_or_create(user=request.user)
-    
+def select_account_view(request):
+    """
+    Allows a new user to select their account type (Job Seeker or Employer).
+    This view creates the main Profile object.
+    """
+    if hasattr(request.user, 'profile'):
+        return redirect('accounts.profile') # If profile exists, go to their profile
+
     if request.method == 'POST':
-        # Handle form submission
-        profile.full_name = request.POST.get('full_name', '')
-        profile.preferred_name = request.POST.get('preferred_name', '')
-        profile.location = request.POST.get('location', '')
-        profile.phone = request.POST.get('phone', '')
-        profile.linkedin = request.POST.get('linkedin', '')
-        profile.summary = request.POST.get('summary', '')
-        profile.technical_skills = request.POST.get('technical_skills', '')
-        profile.soft_skills = request.POST.get('soft_skills', '')
-        profile.degree = request.POST.get('degree', '')
-        profile.institution = request.POST.get('institution', '')
-        profile.graduation_year = request.POST.get('graduation_year') or None
-        profile.gpa = request.POST.get('gpa') or None
-        profile.current_job = request.POST.get('current_job', '')
-        profile.company = request.POST.get('company', '')
-        profile.experience_years = request.POST.get('experience_years', '')
-        profile.availability = request.POST.get('availability', '')
-        profile.languages = request.POST.get('languages', '')
-        profile.certifications = request.POST.get('certifications', '')
-        profile.portfolio = request.POST.get('portfolio', '')
-        profile.salary_expectation = request.POST.get('salary_expectation', '')
+        account_type = request.POST.get('account_type')
+        if account_type in ['jobseeker', 'employer']:
+            profile = Profile.objects.create(user=request.user, account_type=account_type)
+            if account_type == 'jobseeker':
+                return redirect('accounts.create_jobseeker_profile')
+            else:
+                return redirect('accounts.create_employer_profile')
+
+    return render(request, 'accounts/account_select.html')
+
+@login_required
+def create_jobseeker_profile_view(request):
+    """
+    Handles the creation of a detailed JobSeekerProfile using a form.
+    """
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.account_type != 'jobseeker':
+        return redirect('home.index') # Or show an error
+
+    if request.method == 'POST':
+        form = JobSeekerProfileForm(request.POST, request.FILES)
+        if form.is_valid():
+            jobseeker_profile = form.save(commit=False)
+            jobseeker_profile.profile = profile
+            jobseeker_profile.save()
+            messages.success(request, 'Your Job Seeker profile has been created!')
+            return redirect('accounts.profile')
+    else:
+        form = JobSeekerProfileForm()
+
+    return render(request, 'accounts/profile_form.html', {'form': form, 'title': 'Create Your Job Seeker Profile'})
+
+@login_required
+def create_employer_profile_view(request):
+    """
+    Handles the creation of a detailed EmployerProfile using a form.
+    """
+    profile = get_object_or_404(Profile, user=request.user)
+    if profile.account_type != 'employer':
+        return redirect('home.index') # Or show an error
+
+    if request.method == 'POST':
+        form = EmployerProfileForm(request.POST)
+        if form.is_valid():
+            employer_profile = form.save(commit=False)
+            employer_profile.profile = profile
+            employer_profile.save()
+            messages.success(request, 'Your Employer profile has been created!')
+            return redirect('accounts.profile')
+    else:
+        form = EmployerProfileForm()
         
-        # Handle profile picture upload
-        if 'profile_picture' in request.FILES:
-            profile.profile_picture = request.FILES['profile_picture']
-        
-        profile.save()
-        messages.success(request, 'Profile updated successfully!')
-        return redirect('accounts.profile')
+    return render(request, 'accounts/profile_form.html', {'form': form, 'title': 'Create Your Employer Profile'})
+
+@login_required
+def profile_view(request):
+    """
+    Displays the correct profile (Job Seeker or Employer) based on the user's
+    account type. This replaces your original 'profile' view.
+    """
+    profile = get_object_or_404(Profile, user=request.user)
     
-    # Pass profile data to template
-    template_data['profile'] = profile
-    template_data['is_editing'] = True
+    if profile.account_type == 'jobseeker':
+        # Use a try-except block in case the detailed profile hasn't been created yet
+        try:
+            detailed_profile = profile.jobseekerprofile
+            return render(request, 'accounts/jobseeker_profile.html', {'profile': detailed_profile})
+        except JobSeekerProfile.DoesNotExist:
+            return redirect('accounts.create_jobseeker_profile')
+
+    elif profile.account_type == 'employer':
+        try:
+            detailed_profile = profile.employerprofile
+            return render(request, 'accounts/employer_profile.html', {'profile': detailed_profile})
+        except EmployerProfile.DoesNotExist:
+            return redirect('accounts.create_employer_profile')
     
-    return render(request, 'accounts/profile.html', {'template_data': template_data})
+    # Fallback in case something is wrong with the account type
+    return redirect('home.index')
+
+@login_required
+def edit_profile_view(request):
+    """
+    Allows a user to edit their profile. It serves the correct form based on
+    the user's account type. This replaces your original 'edit_profile' view.
+    """
+    profile = get_object_or_404(Profile, user=request.user)
+
+    if profile.account_type == 'jobseeker':
+        detailed_profile = get_object_or_404(JobSeekerProfile, profile=profile)
+        form_class = JobSeekerProfileForm
+        template_name = 'accounts/profile_form.html'
+    elif profile.account_type == 'employer':
+        detailed_profile = get_object_or_404(EmployerProfile, profile=profile)
+        form_class = EmployerProfileForm
+        template_name = 'accounts/profile_form.html'
+    else:
+        return redirect('home.index')
+
+    if request.method == 'POST':
+        form = form_class(request.POST, request.FILES, instance=detailed_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('accounts.profile')
+    else:
+        form = form_class(instance=detailed_profile)
+
+    return render(request, template_name, {'form': form, 'title': 'Edit Your Profile'})
