@@ -80,4 +80,3 @@ class EmployerProfile(models.Model):
     def __str__(self):
         return f"Employer Profile for {self.company_name}"
 
-    
