@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row justify-content/center">
+    <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
@@ -12,7 +12,6 @@
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
-                        {# Check the user's account type to show the correct form #}
                         {% if request.user.profile.account_type == 'jobseeker' %}
                             
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-user"></i> Personal Information</h5></div></div>
@@ -28,8 +27,38 @@
                                 <div class="col-md-6"><label class="form-label">LinkedIn Profile</label>{{ form.linkedin }}</div>
                                 <div class="col-md-6"><label class="form-label">Profile Picture</label>{{ form.profile_picture }}</div>
                             </div>
+
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Professional Summary</h5></div></div>
-                            <div class="row mb-3"><div class="col-12"><label class="form-label">Professional Summary *</label>{{ form.summary }}</div></div>
+                            <div class="row mb-3">
+                                <div class="col-12"><label class="form-label">Professional Summary *</label>{{ form.summary }}</div>
+                            </div>
+
+                            <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-tools"></i> Skills</h5></div></div>
+                            <div class="row mb-3">
+                                <div class="col-12"><label class="form-label">Technical Skills</label>{{ form.technical_skills }}<div class="form-text">Separate skills with commas</div></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-12"><label class="form-label">Soft Skills</label>{{ form.soft_skills }}</div>
+                            </div>
+
+                            <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-graduation-cap"></i> Education</h5></div></div>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><label class="form-label">Degree/Qualification</label>{{ form.degree }}</div>
+                                <div class="col-md-6"><label class="form-label">Institution</label>{{ form.institution }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><label class="form-label">Graduation Year</label>{{ form.graduation_year }}</div>
+                            </div>
+
+                            <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Work Experience</h5></div></div>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><label class="form-label">Current/Previous Job Title</label>{{ form.current_job }}</div>
+                                <div class="col-md-6"><label class="form-label">Company</label>{{ form.company }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><label class="form-label">Years of Experience</label>{{ form.experience_years }}</div>
+                                <div class="col-md-6"><label class="form-label">Availability</label>{{ form.availability }}</div>
+                            </div>
                             {% elif request.user.profile.account_type == 'employer' %}
 
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2">Company Details</h5></div></div>
