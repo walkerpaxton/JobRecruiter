@@ -8,7 +8,9 @@ class JobPostingForm(forms.ModelForm):
         fields = [
             "company_name",
             "title",
-            "location",
+            "city",
+            "state",
+            "zip_code",
             "pay_min",
             "pay_max",
             "currency",

@@ -2,7 +2,12 @@
 {% block content %}
 <div class="container py-4">
 	<div class="d-flex justify-content-between align-items-center mb-3">
-		<h3>Job Openings</h3>
+		<div class="d-flex align-items-center gap-3">
+			<a href="{% url 'jobpostings:map' %}" class="btn btn-outline-secondary">
+				<i class="fas fa-map-marker-alt"></i> Search on Map
+			</a>
+			<h3 class="mb-0">Job Openings</h3>
+		</div>
 		{% if user.is_authenticated and user.profile.account_type == 'employer' %}
 		<a href="{% url 'jobpostings:create' %}" class="btn btn-primary">Post a Job</a>
 		{% endif %}
@@ -55,7 +60,7 @@
 				<div class="d-flex w-100 justify-content-between">
 					<div class="flex-grow-1">
 						<h5 class="mb-1">{{ job.title }}</h5>
-						<p class="mb-1">{{ job.company_name }} — {{ job.location }}</p>
+						<p class="mb-1">{{ job.company_name }} — {{ job.location_display }}</p>
 						<small>Pay: {{ job.pay_range_display }}</small>
 					</div>
 					<div class="d-flex flex-column align-items-end">
@@ -63,6 +68,9 @@
 						<div class="btn-group" role="group">
 							<a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-outline-primary btn-sm">
 								<i class="fas fa-eye"></i> View
+							</a>
+							<a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-outline-info btn-sm">
+								<i class="fas fa-map-marker-alt"></i> Show on Map
 							</a>
 							{% if user.is_authenticated and job.posted_by == user %}
 							<a href="{% url 'jobpostings:edit' job.id %}" class="btn btn-outline-warning btn-sm">
@@ -79,4 +87,5 @@
 		<p>No jobs posted yet.</p>
 	{% endif %}
 </div>
+
 {% endblock content %} 

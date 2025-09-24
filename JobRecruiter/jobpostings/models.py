@@ -14,7 +14,9 @@ class JobPosting(models.Model):
 
     company_name = models.CharField(max_length=150)
     title = models.CharField(max_length=150)
-    location = models.CharField(max_length=150)
+    city = models.CharField(max_length=100, default='Unknown')
+    state = models.CharField(max_length=50, default='Unknown')
+    zip_code = models.CharField(max_length=10, blank=True, help_text="ZIP/Postal code")
     pay_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     pay_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=10, default='USD')
@@ -43,6 +45,9 @@ class JobPosting(models.Model):
         if self.pay_max is not None:
             return f"Up to {self.currency} {self.pay_max:,.2f}"
         return "Not specified"
+    
+    def location_display(self) -> str:
+        return f"{self.city}, {self.state}"
 
 
 class Application(models.Model):

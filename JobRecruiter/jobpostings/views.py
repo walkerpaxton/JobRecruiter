@@ -23,7 +23,12 @@ def job_list_view(request):
         )
     
     if location_filter:
-        jobs = jobs.filter(location__icontains=location_filter)
+        jobs = jobs.filter(
+            Q(city__icontains=location_filter) |
+            Q(state__icontains=location_filter) |
+            Q(city__icontains=location_filter.split(',')[0].strip()) |
+            Q(state__icontains=location_filter.split(',')[1].strip() if ',' in location_filter else '')
+        )
     
     if employment_type_filter:
         jobs = jobs.filter(employment_type=employment_type_filter)
@@ -151,3 +156,71 @@ def apply_to_job_view(request, job_id: int):
     }
     
     return render(request, 'jobpostings/apply_to_job.html', context)
+
+
+def job_map_view(request):
+    """
+    Display an interactive map where users can search for jobs by location.
+    """
+    # Get search parameters
+    search_query = request.GET.get('search', '')
+    location_filter = request.GET.get('location', '')
+    employment_type_filter = request.GET.get('employment_type', '')
+    job_id = request.GET.get('job_id', '')
+    
+    # Get all active jobs
+    jobs = JobPosting.objects.filter(is_active=True)
+    
+    # Apply filters
+    if search_query:
+        jobs = jobs.filter(
+            Q(title__icontains=search_query) |
+            Q(company_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(benefits__icontains=search_query)
+        )
+    
+    if location_filter:
+        jobs = jobs.filter(
+            Q(city__icontains=location_filter) |
+            Q(state__icontains=location_filter) |
+            Q(city__icontains=location_filter.split(',')[0].strip()) |
+            Q(state__icontains=location_filter.split(',')[1].strip() if ',' in location_filter else '')
+        )
+    
+    if employment_type_filter:
+        jobs = jobs.filter(employment_type=employment_type_filter)
+    
+    # Prepare job data for the map
+    job_markers = []
+    highlighted_job = None
+    for job in jobs:
+        # Check if this is the highlighted job
+        is_highlighted = job_id and str(job.id) == str(job_id)
+        if is_highlighted:
+            highlighted_job = job
+            
+        job_markers.append({
+            'id': job.id,
+            'title': job.title,
+            'company': job.company_name,
+            'location': job.location_display(),
+            'pay_range': job.pay_range_display(),
+            'employment_type': job.get_employment_type_display(),
+            'url': reverse('jobpostings:detail', args=[job.id]),
+            'description': job.description[:100] + '...' if len(job.description) > 100 else job.description,
+            'is_highlighted': is_highlighted,
+        })
+    
+    context = {
+        'jobs': jobs,
+        'job_markers': job_markers,
+        'search_query': search_query,
+        'location_filter': location_filter,
+        'employment_type_filter': employment_type_filter,
+        'employment_types': JobPosting.EMPLOYMENT_TYPE_CHOICES,
+        'highlighted_job': highlighted_job,
+        'job_id': job_id,
+    }
+    
+    return render(request, 'jobpostings/job_map.html', context)

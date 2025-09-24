@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Search Panel -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-search"></i> Search Jobs</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search_query }}" placeholder="Enter job title...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                   value="{{ location_filter }}" placeholder="Enter city, state">
+                        </div>
+                        <div class="mb-3">
+                            <label for="employment_type" class="form-label">Employment Type</label>
+                            <select class="form-select" id="employment_type" name="employment_type">
+                                <option value="">All Types</option>
+                                {% for value, label in employment_types %}
+                                    <option value="{{ value }}" {% if employment_type_filter == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </form>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'jobpostings:list' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> List View
+                        </a>
+                        <button class="btn btn-outline-info btn-sm" onclick="centerMap()">
+                            <i class="fas fa-crosshairs"></i> My Location
+                        </button>
+                        {% if location_filter %}
+                        <button class="btn btn-outline-success btn-sm" onclick="centerMapOnLocation('{{ location_filter }}')">
+                            <i class="fas fa-map-marker-alt"></i> Center on Search
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Job Results -->
+            <div class="card">
+                <div class="card-header">
+                    <h6>Jobs Found: {{ jobs.count }}</h6>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% for job in jobs %}
+                    <div class="job-item mb-2 p-2 border rounded">
+                        <h6 class="mb-1">{{ job.title }}</h6>
+                        <p class="mb-1 text-muted">{{ job.company_name }}</p>
+                        <p class="mb-1 text-muted">{{ job.location_display }}</p>
+                        <p class="mb-1"><strong>{{ job.pay_range_display }}</strong></p>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                            <a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-map-marker-alt"></i> Show on Map
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No jobs found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Map Panel -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-map"></i> Job Locations</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 600px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* eslint-disable */
+var map;
+var markers = [];
+
+        function initMap() {
+            map = L.map('map').setView([40.7128, -74.0060], 10);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Check if we have a specific job to highlight
+            var highlightedJobId = '{{ job_id }}';
+            var searchLocation = '{{ location_filter }}';
+
+    if (highlightedJobId && highlightedJobId.trim() !== '') {
+        // Center on the specific job location
+        centerMapOnLocation(searchLocation);
+    } else if (searchLocation && searchLocation.trim() !== '') {
+        centerMapOnLocation(searchLocation);
+    } else {
+        // If no search location, add job markers and fit to bounds
+        addJobMarkers();
+    }
+}
+
+function addJobMarkers() {
+    var jobData = JSON.parse('{{ job_markers|escapejs }}');
+    
+    for (var i = 0; i < jobData.length; i++) {
+        var job = jobData[i];
+        // Geocode each job location
+        geocodeJobLocation(job, i);
+    }
+}
+
+function geocodeJobLocation(job, index) {
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(job.location) + '&limit=1';
+    
+    fetch(geocodingUrl)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            var lat, lng;
+            if (data && data.length > 0) {
+                lat = parseFloat(data[0].lat);
+                lng = parseFloat(data[0].lon);
+            } else {
+                // Fallback to random coordinates if geocoding fails
+                lat = 40.7128 + (Math.random() - 0.5) * 0.1;
+                lng = -74.0060 + (Math.random() - 0.5) * 0.1;
+            }
+            
+            createJobMarker(job, lat, lng);
+        })
+        .catch(function(error) {
+            console.log('Geocoding error for job ' + job.id + ': ' + error);
+            // Fallback to random coordinates if geocoding fails
+            var lat = 40.7128 + (Math.random() - 0.5) * 0.1;
+            var lng = -74.0060 + (Math.random() - 0.5) * 0.1;
+            createJobMarker(job, lat, lng);
+        });
+}
+
+function createJobMarker(job, lat, lng) {
+    // Create marker with different styling for highlighted job
+    var marker;
+    if (job.is_highlighted) {
+        // Use a different colored marker for highlighted job
+        var highlightedIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        marker = L.marker([lat, lng], {icon: highlightedIcon}).addTo(map);
+    } else {
+        marker = L.marker([lat, lng]).addTo(map);
+    }
+    
+    var popupContent = '<div>' +
+        '<h6>' + job.title + '</h6>' +
+        '<p><strong>' + job.company + '</strong></p>' +
+        '<p>' + job.location + '</p>' +
+        '<p>' + job.pay_range + '</p>' +
+        '<a href="' + job.url + '" class="btn btn-sm btn-primary">View Job</a>' +
+        '</div>';
+    
+    marker.bindPopup(popupContent);
+    
+    // Store job ID for showJobOnMap function
+    marker.jobId = job.id;
+    
+    // If this is the highlighted job, open its popup and center on it
+    if (job.is_highlighted) {
+        marker.openPopup();
+        map.setView([lat, lng], 15);
+    }
+    
+    markers.push(marker);
+    
+    // Check if we should fit bounds after all markers are loaded
+    setTimeout(function() {
+        var highlightedJobId = '{{ job_id }}';
+        if (!highlightedJobId || highlightedJobId.trim() === '') {
+            if (markers.length > 0) {
+                var group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+    }, 1000); // Wait 1 second for all markers to load
+}
+
+function centerMap() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            map.setView([lat, lng], 13);
+            
+            L.marker([lat, lng])
+                .addTo(map)
+                .bindPopup('Your Location')
+                .openPopup();
+        });
+    } else {
+        alert('Geolocation not supported.');
+    }
+}
+
+function centerMapOnLocation(location) {
+    if (!location) return;
+    
+    // Use OpenStreetMap Nominatim geocoding service
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(location) + '&limit=1';
+    
+    fetch(geocodingUrl)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                var lat = parseFloat(data[0].lat);
+                var lng = parseFloat(data[0].lon);
+                
+                // Center map on the found location
+                map.setView([lat, lng], 12);
+                
+                // Add a marker for the searched location
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup('Searched: ' + location)
+                    .openPopup();
+                
+                // Add job markers after centering
+                addJobMarkers();
+            } else {
+                console.log('Location not found: ' + location);
+                // Still add job markers even if location not found
+                addJobMarkers();
+            }
+        })
+        .catch(function(error) {
+            console.log('Geocoding error: ' + error);
+            // Still add job markers even if geocoding fails
+            addJobMarkers();
+        });
+}
+
+function showJobOnMap(jobId) {
+    // Find the job in the jobData array
+    var jobData = JSON.parse('{{ job_markers|escapejs }}');
+    var targetJob = null;
+    
+    for (var i = 0; i < jobData.length; i++) {
+        if (jobData[i].id == jobId) {
+            targetJob = jobData[i];
+            break;
+        }
+    }
+    
+    if (targetJob) {
+        // Find the corresponding marker
+        for (var i = 0; i < markers.length; i++) {
+            if (markers[i].jobId == jobId) {
+                markers[i].openPopup();
+                map.setView(markers[i].getLatLng(), 15);
+                break;
+            }
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+});
+/* eslint-enable */
+</script>
+
+<style>
+.job-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock content %}
