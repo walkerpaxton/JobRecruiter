@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.urls import reverse
+from django.db.models import Q
 from accounts.models import Profile
 from .models import JobPosting
 from .forms import JobPostingForm
@@ -9,7 +10,33 @@ from .forms import JobPostingForm
 
 def job_list_view(request):
     jobs = JobPosting.objects.filter(is_active=True)
-    return render(request, 'jobpostings/job_list.html', {'jobs': jobs})
+    search_query = request.GET.get('search', '')
+    location_filter = request.GET.get('location', '')
+    employment_type_filter = request.GET.get('employment_type', '')
+    
+    if search_query:
+        jobs = jobs.filter(
+            Q(title__icontains=search_query) |
+            Q(company_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(benefits__icontains=search_query)
+        )
+    
+    if location_filter:
+        jobs = jobs.filter(location__icontains=location_filter)
+    
+    if employment_type_filter:
+        jobs = jobs.filter(employment_type=employment_type_filter)
+    
+    context = {
+        'jobs': jobs,
+        'search_query': search_query,
+        'location_filter': location_filter,
+        'employment_type_filter': employment_type_filter,
+        'employment_types': JobPosting.EMPLOYMENT_TYPE_CHOICES,
+    }
+    
+    return render(request, 'jobpostings/job_list.html', context)
 
 
 def job_detail_view(request, job_id: int):

@@ -7,6 +7,47 @@
 		<a href="{% url 'jobpostings:create' %}" class="btn btn-primary">Post a Job</a>
 		{% endif %}
 	</div>
+	
+	<!-- Search Form -->
+	<div class="card mb-4">
+		<div class="card-body">
+			<form method="GET" class="row g-3">
+				<div class="col-md-4">
+					<label for="search" class="form-label">Search Jobs</label>
+					<input type="text" class="form-control" id="search" name="search" 
+						   value="{{ search_query }}" placeholder="Job title, company, or keywords...">
+				</div>
+				<div class="col-md-3">
+					<label for="location" class="form-label">Location</label>
+					<input type="text" class="form-control" id="location" name="location" 
+						   value="{{ location_filter }}" placeholder="City, State, or Remote">
+				</div>
+				<div class="col-md-3">
+					<label for="employment_type" class="form-label">Employment Type</label>
+					<select class="form-select" id="employment_type" name="employment_type">
+						<option value="">All Types</option>
+						{% for value, label in employment_types %}
+						<option value="{{ value }}" {% if employment_type_filter == value %}selected{% endif %}>
+							{{ label }}
+						</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="col-md-2 d-flex align-items-end">
+					<button type="submit" class="btn btn-primary w-100">
+						<i class="fas fa-search"></i> Search
+					</button>
+				</div>
+			</form>
+			{% if search_query or location_filter or employment_type_filter %}
+			<div class="mt-3">
+				<a href="{% url 'jobpostings:list' %}" class="btn btn-outline-secondary btn-sm">
+					<i class="fas fa-times"></i> Clear Filters
+				</a>
+			</div>
+			{% endif %}
+		</div>
+	</div>
 	{% if jobs %}
 		<div class="list-group">
 			{% for job in jobs %}
