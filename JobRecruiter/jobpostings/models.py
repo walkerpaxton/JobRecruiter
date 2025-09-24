@@ -43,3 +43,27 @@ class JobPosting(models.Model):
         if self.pay_max is not None:
             return f"Up to {self.currency} {self.pay_max:,.2f}"
         return "Not specified"
+
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('reviewed', 'Reviewed'),
+        ('interview', 'Interview'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    )
+    
+    job_posting = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
+    cover_letter = models.TextField(help_text="Write a tailored cover letter for this specific position")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['job_posting', 'applicant']
+        ordering = ['-applied_at']
+    
+    def __str__(self):
+        return f"{self.applicant.username} applied to {self.job_posting.title}"
