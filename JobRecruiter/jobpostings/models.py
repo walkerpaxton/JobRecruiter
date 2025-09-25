@@ -14,8 +14,8 @@ class JobPosting(models.Model):
 
     company_name = models.CharField(max_length=150)
     title = models.CharField(max_length=150)
-    city = models.CharField(max_length=100, default='Unknown')
-    state = models.CharField(max_length=50, default='Unknown')
+    city = models.CharField(max_length=100, default='')
+    state = models.CharField(max_length=50, default='')
     zip_code = models.CharField(max_length=10, blank=True, help_text="ZIP/Postal code")
     pay_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     pay_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
