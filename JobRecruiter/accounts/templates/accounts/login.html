@@ -8,14 +8,13 @@
           <div class="card-body">
             <h2>Login</h2>
             <hr />
-            
-            {% if messages %}
-              {% for message in messages %}
-                <div class="alert alert-danger" role="alert">
-                  {{ message }}
-                </div>
-              {% endfor %}
+            {% for message in messages %}
+            {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+              <div class="alert alert-danger" role="alert">
+                {{ message }}
+              </div>
             {% endif %}
+          {% endfor %}
             <form method="POST">
               {% csrf_token %}
               <p>

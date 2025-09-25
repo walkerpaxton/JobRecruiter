@@ -111,39 +111,35 @@ def job_edit_view(request, job_id: int):
     return render(request, 'jobpostings/edit_job.html', {'form': form, 'job': job})
 
 
+# In jobpostings/views.py
+
 @login_required
 def apply_to_job_view(request, job_id: int):
     job = get_object_or_404(JobPosting, id=job_id, is_active=True)
     
-    # Check if user is a job seeker
-    try:
-        profile = Profile.objects.get(user=request.user)
-        if profile.account_type != 'jobseeker':
-            messages.error(request, 'Only job seekers can apply to jobs.')
-            return redirect('jobpostings:detail', job_id=job.id)
-    except Profile.DoesNotExist:
-        messages.error(request, 'You must complete your profile before applying to jobs.')
-        return redirect('accounts.profile')
+    if not request.profile or request.profile.account_type != 'jobseeker':
+        messages.error(request, 'Only job seekers can apply for jobs.')
+        return redirect('jobpostings:detail', job_id=job.id)
     
-    # Check if user has already applied
     if Application.objects.filter(job_posting=job, applicant=request.user).exists():
         messages.warning(request, 'You have already applied to this job.')
         return redirect('jobpostings:detail', job_id=job.id)
-    
-    # Get job seeker profile for pre-filling
     try:
-        jobseeker_profile = JobSeekerProfile.objects.get(profile=profile)
+        jobseeker_profile = request.profile.jobseekerprofile
     except JobSeekerProfile.DoesNotExist:
         messages.error(request, 'Please complete your job seeker profile before applying.')
-        return redirect('accounts.profile')
+        # This redirect might need a colon ('accounts:profile') depending on your URL setup.
+        return redirect('accounts.profile') 
     
     if request.method == 'POST':
         form = ApplicationForm(request.POST)
         if form.is_valid():
             application = form.save(commit=False)
-            application.job_posting = job
+            
+            application.job_posting = job 
             application.applicant = request.user
             application.save()
+            
             messages.success(request, 'Your application has been submitted successfully!')
             return redirect('jobpostings:detail', job_id=job.id)
     else:
@@ -157,6 +153,21 @@ def apply_to_job_view(request, job_id: int):
     
     return render(request, 'jobpostings/apply_to_job.html', context)
 
+@login_required
+def job_seeker_applications(request):
+    """
+    Displays a list of all jobs the current job seeker user has applied to.
+    """
+    # Ensure the user has a jobseeker profile
+    if not request.profile or request.profile.account_type != 'jobseeker':
+        return redirect('home.index') # Or some other appropriate page
+
+    applications = Application.objects.filter(applicant=request.user).order_by('-applied_at')
+    
+    context = {
+        'applications': applications
+    }
+    return render(request, 'jobpostings/jobseekersjobs.html', context)
 
 def job_map_view(request):
     """

@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "accounts.middleware.ProfileCompletionMiddleware",
+    'accounts.middleware.ProfileMiddleware',
 ]
 
 ROOT_URLCONF = "JobRecruiter.urls"
