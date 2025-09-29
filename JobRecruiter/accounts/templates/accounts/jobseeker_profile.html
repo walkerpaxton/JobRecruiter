@@ -37,6 +37,9 @@
                             {% if profile.linkedin %}
                                 <p class="mb-2"><i class="fab fa-linkedin text-primary"></i> <a href="{{ profile.linkedin }}" target="_blank">LinkedIn Profile</a></p>
                             {% endif %}
+                            {% if profile.resume %}
+                                <p class="mb-2"><i class="fas fa-file-alt text-primary"></i> <a href="{{ profile.resume.url }}" target="_blank">Resume</a></p>
+                            {% endif %}
                         </div>
                     </div>
                     

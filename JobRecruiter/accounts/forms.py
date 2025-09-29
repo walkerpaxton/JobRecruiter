@@ -29,6 +29,7 @@ class JobSeekerProfileForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'linkedin': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://linkedin.com/in/yourprofile'}),
             'profile_picture': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'resume': forms.FileInput(attrs={'class': 'form-control', 'accept': 'application/pdf'}),
             'summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Tell employers about yourself...'}),
             'technical_skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'e.g., Python, JavaScript, React, SQL, AWS, etc.'}),
             'soft_skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'e.g., Leadership, Communication, Problem Solving, etc.'}),
