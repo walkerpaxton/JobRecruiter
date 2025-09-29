@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.urls import reverse
 from django.db.models import Q
-from accounts.models import Profile, JobSeekerProfile
+from accounts.models import Profile, JobSeekerProfile, EmployerProfile
 from .models import JobPosting, Application
 from .forms import JobPostingForm, ApplicationForm
 
@@ -71,13 +71,13 @@ def job_detail_view(request, job_id: int):
 def job_create_view(request):
     try:
         profile = Profile.objects.get(user=request.user)
-    except Profile.DoesNotExist:
-        messages.error(request, 'You must complete your profile before posting a job.')
+        if profile.account_type != 'employer':
+            messages.error(request, 'Only employers can post jobs.')
+            return redirect('jobpostings:list')
+        employer_profile = EmployerProfile.objects.get(profile=profile)
+    except (Profile.DoesNotExist, EmployerProfile.DoesNotExist):
+        messages.error(request, 'You must complete your employer profile before posting a job.')
         return redirect('accounts.profile')
-
-    if profile.account_type != 'employer':
-        messages.error(request, 'Only employers can post jobs.')
-        return redirect('jobpostings:list')
 
     if request.method == 'POST':
         form = JobPostingForm(request.POST)
@@ -88,7 +88,12 @@ def job_create_view(request):
             messages.success(request, 'Job posted successfully!')
             return redirect(reverse('jobpostings:detail', args=[job.id]))
     else:
-        form = JobPostingForm()
+        initial_data = {
+            'company_name': employer_profile.company_name,
+            'city': employer_profile.location.split(',')[0].strip() if ',' in employer_profile.location else employer_profile.location,
+            'state': employer_profile.location.split(',')[1].strip() if ',' in employer_profile.location else ''
+        }
+        form = JobPostingForm(initial=initial_data)
 
     return render(request, 'jobpostings/job_create.html', {'form': form})
 

@@ -36,6 +36,7 @@ class JobSeekerProfile(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     linkedin = models.URLField(blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/jobseekers/', blank=True, null=True)
+    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
     
     # Professional Information
     summary = models.TextField(blank=True)
