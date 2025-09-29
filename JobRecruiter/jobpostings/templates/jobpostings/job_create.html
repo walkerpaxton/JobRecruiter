@@ -7,7 +7,9 @@
 		<div class="row g-3">
 			<div class="col-md-6">{{ form.company_name.label_tag }} {{ form.company_name }}</div>
 			<div class="col-md-6">{{ form.title.label_tag }} {{ form.title }}</div>
-			<div class="col-md-6">{{ form.location.label_tag }} {{ form.location }}</div>
+			<div class="col-md-6">{{ form.city.label_tag }} {{ form.city }}</div>
+			<div class="col-md-6">{{ form.state.label_tag }} {{ form.state }}</div>
+			<div class="col-md-6">{{ form.zip_code.label_tag }} {{ form.zip_code }}</div>
 			<div class="col-md-3">{{ form.pay_min.label_tag }} {{ form.pay_min }}</div>
 			<div class="col-md-3">{{ form.pay_max.label_tag }} {{ form.pay_max }}</div>
 			<div class="col-md-3">{{ form.currency.label_tag }} {{ form.currency }}</div>
@@ -19,7 +21,7 @@
 		</div>
 		<div class="mt-3">
 			<button type="submit" class="btn btn-primary">Publish Job</button>
-			<a href="{% url 'jobpostings.list' %}" class="btn btn-outline-secondary">Cancel</a>
+			<a href="{% url 'jobpostings:list' %}" class="btn btn-outline-secondary">Cancel</a>
 		</div>
 	</form>
 </div>

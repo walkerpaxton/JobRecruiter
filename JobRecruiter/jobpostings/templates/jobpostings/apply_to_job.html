@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-link">← Back to Job</a>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Apply to {{ job.title }}</h4>
+                    <p class="mb-0 text-muted">{{ job.company_name }} — {{ job.location }}</p>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ form.cover_letter.label_tag }}
+                            {{ form.cover_letter }}
+                            {% if form.cover_letter.help_text %}
+                                <div class="form-text">{{ form.cover_letter.help_text }}</div>
+                            {% endif %}
+                            {% if form.cover_letter.errors %}
+                                <div class="text-danger">{{ form.cover_letter.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Submit Application</button>
+                            <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Your Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Personal Information</h6>
+                    <p><strong>Name:</strong> {{ jobseeker_profile.full_name }}</p>
+                    {% if jobseeker_profile.location %}
+                        <p><strong>Location:</strong> {{ jobseeker_profile.location }}</p>
+                    {% endif %}
+                    {% if jobseeker_profile.phone %}
+                        <p><strong>Phone:</strong> {{ jobseeker_profile.phone }}</p>
+                    {% endif %}
+                    {% if jobseeker_profile.linkedin %}
+                        <p><strong>LinkedIn:</strong> <a href="{{ jobseeker_profile.linkedin }}" target="_blank">View Profile</a></p>
+                    {% endif %}
+                    
+                    {% if jobseeker_profile.summary %}
+                        <h6>Professional Summary</h6>
+                        <p>{{ jobseeker_profile.summary }}</p>
+                    {% endif %}
+                    
+                    {% if jobseeker_profile.technical_skills %}
+                        <h6>Technical Skills</h6>
+                        <p>{{ jobseeker_profile.technical_skills }}</p>
+                    {% endif %}
+                    
+                    {% if jobseeker_profile.current_job %}
+                        <h6>Current Position</h6>
+                        <p><strong>{{ jobseeker_profile.current_job }}</strong> at {{ jobseeker_profile.company }}</p>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'accounts.profile' %}" class="btn btn-outline-primary btn-sm">Update Profile</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Job Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Employment Type:</strong> {{ job.get_employment_type_display }}</p>
+                    <p><strong>Pay Range:</strong> {{ job.pay_range_display }}</p>
+                    <p><strong>Posted:</strong> {{ job.created_at|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

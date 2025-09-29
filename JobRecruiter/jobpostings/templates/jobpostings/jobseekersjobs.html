@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>My Job Applications</h2>
+    <hr>
+    {% if applications %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">Job Title</th>
+                        <th scope="col">Company</th>
+                        <th scope="col">Date Applied</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for application in applications %}
+                    <tr>
+                        <td><a href="{% url 'jobpostings:detail' application.job_posting.id %}">{{ application.job_posting.title }}</a></td>
+                        <td>{{ application.job_posting.company_name }}</td>
+                        <td>{{ application.applied_at|date:"F d, Y" }}</td>
+                        <td>
+                            {% if application.status == 'pending' %}
+                                <span class="badge bg-primary">Pending</span>
+                            {% elif application.status == 'reviewed' %}
+                                <span class="badge bg-info">Reviewed</span>
+                            {% elif application.status == 'interview' %}
+                                <span class="badge bg-warning">Interviewing</span>
+                            {% elif application.status == 'accepted' %}
+                                <span class="badge bg-success">Accepted</span>
+                            {% elif application.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Unknown</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>You have not applied to any jobs yet. <a href="{% url 'jobpostings:list' %}">Find jobs now!</a></p>
+    {% endif %}
+</div>
+{% endblock %}

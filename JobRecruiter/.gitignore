@@ -152,4 +152,15 @@ media/
 staticfiles/
 static_root/
 
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
 accounts/pychache
+__pycache__/
+
+db.sqlite3
+/media/

@@ -14,7 +14,9 @@ class JobPosting(models.Model):
 
     company_name = models.CharField(max_length=150)
     title = models.CharField(max_length=150)
-    location = models.CharField(max_length=150)
+    city = models.CharField(max_length=100, default='')
+    state = models.CharField(max_length=50, default='')
+    zip_code = models.CharField(max_length=10, blank=True, help_text="ZIP/Postal code")
     pay_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     pay_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=10, default='USD')
@@ -43,3 +45,30 @@ class JobPosting(models.Model):
         if self.pay_max is not None:
             return f"Up to {self.currency} {self.pay_max:,.2f}"
         return "Not specified"
+    
+    def location_display(self) -> str:
+        return f"{self.city}, {self.state}"
+
+
+class Application(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('reviewed', 'Reviewed'),
+        ('interview', 'Interview'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    )
+    
+    job_posting = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
+    cover_letter = models.TextField(help_text="Write a tailored cover letter for this specific position")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['job_posting', 'applicant']
+        ordering = ['-applied_at']
+    
+    def __str__(self):
+        return f"{self.applicant.username} applied to {self.job_posting.title}"

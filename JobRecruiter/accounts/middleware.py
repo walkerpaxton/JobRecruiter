@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
 from django.urls import reverse
+from .models import Profile
 
 class ProfileCompletionMiddleware:
     """
@@ -23,4 +24,24 @@ class ProfileCompletionMiddleware:
                 if request.path not in allowed_paths:
                     return redirect('accounts.account_select')
 
+        return response
+    
+class ProfileMiddleware:
+    """
+    Attaches the user's profile to the request object so it can be
+    accessed in any template.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            try:
+                request.profile = Profile.objects.get(user=request.user)
+            except Profile.DoesNotExist:
+                request.profile = None
+        else:
+            request.profile = None
+        
+        response = self.get_response(request)
         return response

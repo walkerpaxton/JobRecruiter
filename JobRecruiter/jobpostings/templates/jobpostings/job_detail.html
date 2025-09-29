@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-4">
-	<a href="{% url 'jobpostings.list' %}" class="btn btn-link">← Back to Jobs</a>
+	<a href="{% url 'jobpostings:list' %}" class="btn btn-link">← Back to Jobs</a>
 	<div class="card mt-2">
 		<div class="card-body">
 			<h3 class="card-title">{{ job.title }}</h3>
-			<h5 class="card-subtitle mb-2 text-muted">{{ job.company_name }} — {{ job.location }}</h5>
+			<h5 class="card-subtitle mb-2 text-muted">{{ job.company_name }} — {{ job.location_display }}</h5>
 			<p class="mb-1"><strong>Employment Type:</strong> {{ job.get_employment_type_display }}</p>
 			<p class="mb-1"><strong>Pay Range:</strong> {{ job.pay_range_display }}</p>
 			<hr />
@@ -17,8 +17,26 @@
 			{% endif %}
 			<hr />
 			<h6>How to Apply</h6>
+			
+			{% if user.is_authenticated and not is_jobseeker %}
+				<div class="alert alert-warning">
+					<strong>Profile Required:</strong> You need to create a jobseeker profile to apply for jobs. 
+					<a href="{% url 'accounts.account_select' %}" class="btn btn-warning btn-sm">Create Profile</a>
+				</div>
+			{% endif %}
+			
+					{% if user.is_authenticated and is_jobseeker %}
+						{% if not has_applied %}
+							<p><a href="{% url 'jobpostings:apply' job.id %}" class="btn btn-primary">Apply Now</a></p>
+						{% else %}
+							<p><span class="badge bg-success">You have already applied to this job</span></p>
+						{% endif %}
+					{% endif %}
+					<p><a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-outline-info">
+						<i class="fas fa-map-marker-alt"></i> Show on Map
+					</a></p>
 			{% if job.application_url %}
-			<p><a href="{{ job.application_url }}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Apply on Company Site</a></p>
+			<p><a href="{{ job.application_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">Apply on Company Site</a></p>
 			{% elif job.application_email %}
 			<p>Email your application to <a href="mailto:{{ job.application_email }}">{{ job.application_email }}</a></p>
 			{% else %}
