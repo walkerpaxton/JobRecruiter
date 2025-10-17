@@ -18,7 +18,7 @@
                         <div class="mb-3">
                             <label for="location" class="form-label">Location</label>
                             <input type="text" class="form-control" id="location" name="location" 
-                                   value="{{ location_filter }}" placeholder="Enter city, state">
+                                   value="{{ location_filter }}" placeholder="Enter Address">
                         </div>
                         <div class="mb-3">
                             <label for="employment_type" class="form-label">Employment Type</label>
@@ -62,12 +62,13 @@
                         <h6 class="mb-1">{{ job.title }}</h6>
                         <p class="mb-1 text-muted">{{ job.company_name }}</p>
                         <p class="mb-1 text-muted">{{ job.location_display }}</p>
+                        <p class="mb-1 text-muted">{{ job.address }}</p>
                         <p class="mb-1"><strong>{{ job.pay_range_display }}</strong></p>
                         <div class="d-flex gap-1">
                             <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-sm btn-outline-primary">
                                 View
                             </a>
-                            <a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-sm btn-outline-info">
+                            <a href="{% url 'jobpostings:map' %}?location={{ job.address|urlencode }}" class="btn btn-sm btn-outline-info">
                                 <i class="fas fa-map-marker-alt"></i> Show on Map
                             </a>
                         </div>

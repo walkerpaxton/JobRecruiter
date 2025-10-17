@@ -10,7 +10,7 @@ class JobPostingForm(forms.ModelForm):
             "title",
             "city",
             "state",
-            "zip_code",
+            "address",
             "pay_min",
             "pay_max",
             "currency",

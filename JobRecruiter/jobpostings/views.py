@@ -222,6 +222,7 @@ def job_map_view(request):
             'company': job.company_name,
             'location': job.location_display(),
             'pay_range': job.pay_range_display(),
+            'address': job.address,
             'employment_type': job.get_employment_type_display(),
             'url': reverse('jobpostings:detail', args=[job.id]),
             'description': job.description[:100] + '...' if len(job.description) > 100 else job.description,
