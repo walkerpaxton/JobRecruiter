@@ -7,6 +7,68 @@ from accounts.models import Profile, JobSeekerProfile, EmployerProfile
 from .models import JobPosting, Application
 from .forms import JobPostingForm, ApplicationForm
 
+US_STATE_NAMES = {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming",
+}
+
+
+def get_state_full_name(state_value: str) -> str:
+    if not state_value:
+        return ''
+    state_value = state_value.strip()
+    if len(state_value) == 2:
+        return US_STATE_NAMES.get(state_value.upper(), state_value)
+    return state_value
+
 
 def job_list_view(request):
     jobs = JobPosting.objects.filter(is_active=True)
@@ -215,6 +277,14 @@ def job_map_view(request):
         is_highlighted = job_id and str(job.id) == str(job_id)
         if is_highlighted:
             highlighted_job = job
+
+        display_location = job.full_address()
+        state_value = job.state.strip() if job.state else ''
+        state_full = get_state_full_name(state_value)
+        geocode_parts = [job.address, job.city, state_full or state_value]
+        if state_value or state_full:
+            geocode_parts.append('USA')
+        geocode_query = ", ".join(part for part in geocode_parts if part) or display_location
             
         job_markers.append({
             'id': job.id,
@@ -223,6 +293,10 @@ def job_map_view(request):
             'location': job.location_display(),
             'pay_range': job.pay_range_display(),
             'address': job.address,
+            'geocode_query': geocode_query,
+            'display_location': display_location,
+            'state': state_value,
+            'state_full': state_full,
             'employment_type': job.get_employment_type_display(),
             'url': reverse('jobpostings:detail', args=[job.id]),
             'description': job.description[:100] + '...' if len(job.description) > 100 else job.description,

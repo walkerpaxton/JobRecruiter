@@ -43,7 +43,7 @@
                             <i class="fas fa-crosshairs"></i> My Location
                         </button>
                         {% if location_filter %}
-                        <button class="btn btn-outline-success btn-sm" onclick="centerMapOnLocation('{{ location_filter }}')">
+                        <button class="btn btn-outline-success btn-sm" onclick="centerMapOnLocation('{{ location_filter|escapejs }}', '{{ job_id|escapejs }}')">
                             <i class="fas fa-map-marker-alt"></i> Center on Search
                         </button>
                         {% endif %}
@@ -68,9 +68,11 @@
                             <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-sm btn-outline-primary">
                                 View
                             </a>
-                            <a href="{% url 'jobpostings:map' %}?location={{ job.address|urlencode }}" class="btn btn-sm btn-outline-info">
+                            {% with map_location=job.address|default:job.location_display %}
+                            <a href="{% url 'jobpostings:map' %}?location={{ map_location|urlencode }}&job_id={{ job.id }}" class="btn btn-sm btn-outline-info">
                                 <i class="fas fa-map-marker-alt"></i> Show on Map
                             </a>
+                            {% endwith %}
                         </div>
                     </div>
                     {% empty %}
@@ -99,27 +101,30 @@
 <!-- Leaflet JavaScript -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+{{ job_markers|json_script:"job-markers-data" }}
+
 <script>
 /* eslint-disable */
 var map;
 var markers = [];
+var jobData = JSON.parse(document.getElementById('job-markers-data').textContent);
 
-        function initMap() {
-            map = L.map('map').setView([40.7128, -74.0060], 10);
+function initMap() {
+    map = L.map('map').setView([40.7128, -74.0060], 10);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-            // Check if we have a specific job to highlight
-            var highlightedJobId = '{{ job_id }}';
-            var searchLocation = '{{ location_filter }}';
+    // Check if we have a specific job to highlight
+    var highlightedJobId = '{{ job_id|escapejs }}';
+    var searchLocation = '{{ location_filter|escapejs }}';
 
     if (highlightedJobId && highlightedJobId.trim() !== '') {
         // Center on the specific job location
-        centerMapOnLocation(searchLocation);
+        centerMapOnLocation(searchLocation, highlightedJobId);
     } else if (searchLocation && searchLocation.trim() !== '') {
-        centerMapOnLocation(searchLocation);
+        centerMapOnLocation(searchLocation, null);
     } else {
         // If no search location, add job markers and fit to bounds
         addJobMarkers();
@@ -127,41 +132,61 @@ var markers = [];
 }
 
 function addJobMarkers() {
-    var jobData = JSON.parse('{{ job_markers|escapejs }}');
-    
+    if (markers.length > 0) {
+        return;
+    }
+
     for (var i = 0; i < jobData.length; i++) {
         var job = jobData[i];
         // Geocode each job location
-        geocodeJobLocation(job, i);
+        geocodeJobLocation(job);
     }
 }
 
-function geocodeJobLocation(job, index) {
-    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(job.location) + '&limit=1';
-    
+function geocodeJobLocation(job) {
+    var candidates = [];
+    if (job.geocode_query) {
+        candidates.push(job.geocode_query);
+    }
+    if (job.address && job.state_full) {
+        candidates.push(job.address + ', ' + job.state_full + ', USA');
+    }
+    if (job.location) {
+        candidates.push(job.location + ', USA');
+    }
+
+    candidates = candidates.filter(function(candidate, index, self) {
+        return candidate && self.indexOf(candidate) === index;
+    });
+
+    attemptGeocode(job, candidates, 0);
+}
+
+function attemptGeocode(job, candidates, attemptIndex) {
+    if (!candidates || attemptIndex >= candidates.length) {
+        console.log('Geocoding failed for job ' + job.id);
+        return;
+    }
+
+    var query = candidates[attemptIndex];
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=1';
+
     fetch(geocodingUrl)
         .then(function(response) {
             return response.json();
         })
         .then(function(data) {
-            var lat, lng;
             if (data && data.length > 0) {
-                lat = parseFloat(data[0].lat);
-                lng = parseFloat(data[0].lon);
+                var lat = parseFloat(data[0].lat);
+                var lng = parseFloat(data[0].lon);
+                createJobMarker(job, lat, lng);
             } else {
-                // Fallback to random coordinates if geocoding fails
-                lat = 40.7128 + (Math.random() - 0.5) * 0.1;
-                lng = -74.0060 + (Math.random() - 0.5) * 0.1;
+                attemptGeocode(job, candidates, attemptIndex + 1);
             }
-            
-            createJobMarker(job, lat, lng);
         })
         .catch(function(error) {
             console.log('Geocoding error for job ' + job.id + ': ' + error);
-            // Fallback to random coordinates if geocoding fails
-            var lat = 40.7128 + (Math.random() - 0.5) * 0.1;
-            var lng = -74.0060 + (Math.random() - 0.5) * 0.1;
-            createJobMarker(job, lat, lng);
+            attemptGeocode(job, candidates, attemptIndex + 1);
         });
 }
 
@@ -182,13 +207,14 @@ function createJobMarker(job, lat, lng) {
     } else {
         marker = L.marker([lat, lng]).addTo(map);
     }
-    
+    var popupLocation = job.display_location || job.location;
+
     var popupContent = '<div>' +
         '<h6>' + job.title + '</h6>' +
         '<p><strong>' + job.company + '</strong></p>' +
-        '<p>' + job.location + '</p>' +
+        '<p>' + popupLocation + '</p>' +
         '<p>' + job.pay_range + '</p>' +
-        '<a href="' + job.url + '" class="btn btn-sm btn-primary">View Job</a>' +
+        '<a href="' + job.url + '" class="btn btn-sm btn-primary text-white">View Job</a>' +
         '</div>';
     
     marker.bindPopup(popupContent);
@@ -233,12 +259,37 @@ function centerMap() {
     }
 }
 
-function centerMapOnLocation(location) {
-    if (!location) return;
-    
+function centerMapOnLocation(location, jobId) {
+    var selectedJob = null;
+    if (jobId) {
+        for (var i = 0; i < jobData.length; i++) {
+            if (jobData[i].id == jobId) {
+                selectedJob = jobData[i];
+                break;
+            }
+        }
+    }
+
+    var geocodeTarget = selectedJob && selectedJob.geocode_query ? selectedJob.geocode_query : location;
+    if (!selectedJob && geocodeTarget && geocodeTarget.toLowerCase().indexOf('usa') === -1) {
+        geocodeTarget = geocodeTarget + ', USA';
+    }
+    if (!geocodeTarget) {
+        addJobMarkers();
+        return;
+    }
+
+    var popupLabel;
+    if (selectedJob) {
+        var displayLocation = selectedJob.display_location || selectedJob.location;
+        popupLabel = selectedJob.company + ': ' + displayLocation;
+    } else {
+        popupLabel = location;
+    }
+
     // Use OpenStreetMap Nominatim geocoding service
-    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(location) + '&limit=1';
-    
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(geocodeTarget) + '&limit=1';
+
     fetch(geocodingUrl)
         .then(function(response) {
             return response.json();
@@ -254,7 +305,7 @@ function centerMapOnLocation(location) {
                 // Add a marker for the searched location
                 L.marker([lat, lng])
                     .addTo(map)
-                    .bindPopup('Searched: ' + location)
+                    .bindPopup(popupLabel)
                     .openPopup();
                 
                 // Add job markers after centering
@@ -274,7 +325,6 @@ function centerMapOnLocation(location) {
 
 function showJobOnMap(jobId) {
     // Find the job in the jobData array
-    var jobData = JSON.parse('{{ job_markers|escapejs }}');
     var targetJob = null;
     
     for (var i = 0; i < jobData.length; i++) {

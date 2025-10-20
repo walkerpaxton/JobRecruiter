@@ -49,6 +49,10 @@ class JobPosting(models.Model):
     def location_display(self) -> str:
         return f"{self.city}, {self.state}"
 
+    def full_address(self) -> str:
+        parts = [self.address, self.city, self.state]
+        return ", ".join(part for part in parts if part) or self.location_display()
+
 
 class Application(models.Model):
     STATUS_CHOICES = (
