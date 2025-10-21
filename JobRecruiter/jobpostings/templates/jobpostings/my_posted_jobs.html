@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">My Posted Jobs</h2>
+
+    {% if posted_jobs %}
+        <p>Here are all the jobs you have posted. You can edit them or view their details.</p>
+        
+        <div class="list-group">
+            {% for job in posted_jobs %}
+                <div class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1"><a href="{% url 'jobpostings:detail' job.id %}" class="text-decoration-none">{{ job.title }}</a></h5>
+                        <small>Posted: {{ job.created_at|date:"M d, Y" }}</small>
+                    </div>
+                    <p class="mb-1">
+                        Location: {{ job.location_display }}
+                    </p>
+                    <p class="mb-2">
+                        Status: {% if job.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                    </p>
+                    
+                    <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-primary btn-sm">View Details</a>
+                    
+                    <a href="{% url 'jobpostings:edit' job.id %}" class="btn btn-secondary btn-sm">Edit Job</a>
+                    
+                    </div>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            You have not posted any jobs yet.
+        </div>
+    {% endif %}
+
+</div>
+{% endblock content %}

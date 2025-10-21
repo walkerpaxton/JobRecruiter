@@ -15,31 +15,88 @@
                         {% if request.user.profile.account_type == 'jobseeker' %}
                             
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-user"></i> Personal Information</h5></div></div>
+                            
                             <div class="row mb-3">
-                                <div class="col-md-6"><label class="form-label">Full Name *</label>{{ form.full_name }}</div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name *</label>{{ form.full_name }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_full_name_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_full_name_to_recruiters.id_for_label }}">Show Full Name</label>
+                                    </div>
+                                </div>
                                 <div class="col-md-6"><label class="form-label">Preferred Name</label>{{ form.preferred_name }}</div>
                             </div>
+                            
                             <div class="row mb-3">
-                                <div class="col-md-6"><label class="form-label">Location *</label>{{ form.location }}</div>
-                                <div class="col-md-6"><label class="form-label">Phone Number</label>{{ form.phone }}</div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Location *</label>{{ form.location }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_location_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_location_to_recruiters.id_for_label }}">Show Location</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>{{ form.phone }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_phone_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_phone_to_recruiters.id_for_label }}">Show Phone Number (Default: Hidden)</label>
+                                    </div>
+                                </div>
                             </div>
+                            
                             <div class="row mb-3">
-                                <div class="col-md-6"><label class="form-label">LinkedIn Profile</label>{{ form.linkedin }}</div>
-                                <div class="col-md-6"><label class="form-label">Profile Picture</label>{{ form.profile_picture }}</div>
-                                <div class="col-md-6"><label class="form-label">Resume/CV (PDF)</label>{{ form.resume }}</div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">LinkedIn Profile</label>{{ form.linkedin }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_linkedin_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_linkedin_to_recruiters.id_for_label }}">Show LinkedIn</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Profile Picture</label>{{ form.profile_picture }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_profile_picture_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_profile_picture_to_recruiters.id_for_label }}">Show Picture</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Resume/CV (PDF)</label>{{ form.resume }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_resume_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_resume_to_recruiters.id_for_label }}">Allow Resume View/Download</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Professional Summary</h5></div></div>
                             <div class="row mb-3">
-                                <div class="col-12"><label class="form-label">Professional Summary *</label>{{ form.summary }}</div>
+                                <div class="col-12">
+                                    <label class="form-label">Professional Summary *</label>{{ form.summary }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_summary_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_summary_to_recruiters.id_for_label }}">Show Summary</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-tools"></i> Skills</h5></div></div>
                             <div class="row mb-3">
-                                <div class="col-12"><label class="form-label">Technical Skills</label>{{ form.technical_skills }}<div class="form-text">Separate skills with commas</div></div>
+                                <div class="col-12">
+                                    <label class="form-label">Technical Skills</label>{{ form.technical_skills }}<div class="form-text">Separate skills with commas</div>
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_technical_skills_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_technical_skills_to_recruiters.id_for_label }}">Show Technical Skills</label>
+                                    </div>
+                                </div>
                             </div>
                             <div class="row mb-3">
-                                <div class="col-12"><label class="form-label">Soft Skills</label>{{ form.soft_skills }}</div>
+                                <div class="col-12">
+                                    <label class="form-label">Soft Skills</label>{{ form.soft_skills }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_soft_skills_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_soft_skills_to_recruiters.id_for_label }}">Show Soft Skills</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-graduation-cap"></i> Education</h5></div></div>
@@ -49,6 +106,12 @@
                             </div>
                             <div class="row mb-3">
                                 <div class="col-md-6"><label class="form-label">Graduation Year</label>{{ form.graduation_year }}</div>
+                                <div class="col-12 mt-2">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_education_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_education_to_recruiters.id_for_label }}">Show Education History</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Work Experience</h5></div></div>
@@ -58,10 +121,39 @@
                             </div>
                             <div class="row mb-3">
                                 <div class="col-md-6"><label class="form-label">Years of Experience</label>{{ form.experience_years }}</div>
-                                <div class="col-md-6"><label class="form-label">Availability</label>{{ form.availability }}</div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Availability</label>{{ form.availability }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_availability_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_availability_to_recruiters.id_for_label }}">Show Availability</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_work_experience_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_work_experience_to_recruiters.id_for_label }}">Show Work Experience History</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Portfolio</label>{{ form.portfolio }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_portfolio_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_portfolio_to_recruiters.id_for_label }}">Show Portfolio</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Salary Expectation</label>{{ form.salary_expectation }}
+                                    <div class="form-check form-switch mt-2">
+                                        {{ form.show_salary_expectation_to_recruiters }}
+                                        <label class="form-check-label" for="{{ form.show_salary_expectation_to_recruiters.id_for_label }}">Show Salary Expectation (Default: Hidden)</label>
+                                    </div>
+                                </div>
                             </div>
                             {% elif request.user.profile.account_type == 'employer' %}
-
+                            
                             <div class="row mb-4"><div class="col-12"><h5 class="text-primary border-bottom pb-2">Company Details</h5></div></div>
                             <div class="row mb-3">
                                 <div class="col-md-6"><label class="form-label">Company Name</label>{{ form.company_name }}</div>

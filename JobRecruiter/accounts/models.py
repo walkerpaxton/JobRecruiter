@@ -37,26 +37,45 @@ class JobSeekerProfile(models.Model):
     linkedin = models.URLField(blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/jobseekers/', blank=True, null=True)
     resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+
+    show_full_name_to_recruiters = models.BooleanField(default=True)
+    show_location_to_recruiters = models.BooleanField(default=True)
+    show_phone_to_recruiters = models.BooleanField(default=True) 
+    show_linkedin_to_recruiters = models.BooleanField(default=True)
+    show_profile_picture_to_recruiters = models.BooleanField(default=True)
+    show_resume_to_recruiters = models.BooleanField(default=True)
     
     # Professional Information
     summary = models.TextField(blank=True)
     technical_skills = models.TextField(blank=True)
     soft_skills = models.TextField(blank=True)
+
+    show_summary_to_recruiters = models.BooleanField(default=True)
+    show_technical_skills_to_recruiters = models.BooleanField(default=True)
+    show_soft_skills_to_recruiters = models.BooleanField(default=True)
     
     # Education
     degree = models.CharField(max_length=100, blank=True)
     institution = models.CharField(max_length=100, blank=True)
     graduation_year = models.IntegerField(blank=True, null=True)
     
+    show_education_to_recruiters = models.BooleanField(default=True) # Controls all education fields
+
     # Work Experience
     current_job = models.CharField(max_length=100, blank=True)
     company = models.CharField(max_length=100, blank=True)
     experience_years = models.CharField(max_length=20, blank=True)
     availability = models.CharField(max_length=20, blank=True)
     
+    show_work_experience_to_recruiters = models.BooleanField(default=True) # Controls all work history fields
+    show_availability_to_recruiters = models.BooleanField(default=True)
+
     # Additional Information
     portfolio = models.URLField(blank=True)
     salary_expectation = models.CharField(max_length=50, blank=True)
+
+    show_portfolio_to_recruiters = models.BooleanField(default=True)
+    show_salary_expectation_to_recruiters = models.BooleanField(default=True)
     
     def __str__(self):
         return f"Job Seeker Profile for {self.profile.user.username}"

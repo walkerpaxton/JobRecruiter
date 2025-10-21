@@ -69,6 +69,23 @@ def get_state_full_name(state_value: str) -> str:
         return US_STATE_NAMES.get(state_value.upper(), state_value)
     return state_value
 
+@login_required
+def my_posted_jobs(request):
+    # 1. Check if the user is an employer
+    #    (Using the logic from your base.html)
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('home.index') # Or wherever you want to send non-employers
+
+    # 2. Get all jobs where 'posted_by' is the current logged-in user
+    posted_jobs = JobPosting.objects.filter(posted_by=request.user).order_by('-created_at')
+    
+    context = {
+        'posted_jobs': posted_jobs
+    }
+    
+    # 3. Render the new template we are about to create
+    return render(request, 'jobpostings/my_posted_jobs.html', context)
 
 def job_list_view(request):
     jobs = JobPosting.objects.filter(is_active=True)
