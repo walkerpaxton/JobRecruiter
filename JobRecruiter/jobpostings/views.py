@@ -332,3 +332,29 @@ def job_map_view(request):
     }
     
     return render(request, 'jobpostings/job_map.html', context)
+
+@login_required
+def view_applicants(request, job_id):
+    # 1. Get the job post, ensuring it exists
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    # 2. Security Check 1: Ensure the user is an employer
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('home.index')
+
+    # 3. Security Check 2: Ensure the employer owns this job posting
+    if job.posted_by != request.user:
+        messages.error(request, 'This is not your job posting.')
+        return redirect('jobpostings:my_posted_jobs') # Send them back to their list
+
+    # 4. Get all applications for this job.
+    all_applications = job.applications.all().order_by('-applied_at')
+
+    context = {
+        'job': job,
+        'applications': all_applications
+    }
+
+    # 5. Render the new template we are about to create
+    return render(request, 'jobpostings/view_applicants.html', context)

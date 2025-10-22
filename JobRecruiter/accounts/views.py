@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth.models import User
 
 # --- Import our new forms and models ---
 from .forms import CustomUserCreationForm, CustomErrorList, JobSeekerProfileForm, EmployerProfileForm
@@ -170,3 +171,37 @@ def edit_profile_view(request):
         form = form_class(instance=detailed_profile)
 
     return render(request, template_name, {'form': form, 'title': 'Edit Your Profile'})
+
+@login_required
+def public_profile_view(request, user_id):
+    """
+    Displays a specific job seeker's public profile.
+    This view is intended to be used by employers.
+    """
+    # Security Check: Ensure the person viewing is an employer
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, "You do not have permission to view this page.")
+        return redirect('home.index')
+
+    # Get the job seeker's User object
+    job_seeker_user = get_object_or_404(User, id=user_id)
+    
+    try:
+        # Get the detailed profile from that User
+        detailed_profile = job_seeker_user.profile.jobseekerprofile
+        back_url = request.META.get('HTTP_REFERER')
+        # We can re-use your existing template for a job seeker profile
+        return render(request, 'accounts/jobseeker_profile.html', {
+            'profile': detailed_profile,
+            'is_public_view': True, # Optional: lets template know this isn't the user's own profile
+            'back_url': back_url
+        })
+    
+    except JobSeekerProfile.DoesNotExist:
+        messages.error(request, "This user does not have a job seeker profile.")
+        # Go back to the page they came from (the applicants list)
+        return redirect(request.META.get('HTTP_REFERER', 'jobpostings:my_posted_jobs'))
+    
+    except Profile.DoesNotExist:
+        messages.error(request, "This user does not have a base profile.")
+        return redirect(request.META.get('HTTP_REFERER', 'jobpostings:my_posted_jobs'))

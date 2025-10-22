@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Applicants for: <span class="text-primary">{{ job.title }}</span></h2>
+
+    {% if applications %}
+        <p>You have {{ applications.count }} application{{ applications.count|pluralize }}.</p>
+        
+        <div class="list-group">
+            {% for app in applications %}
+                <div class="list-group-item mb-3 shadow-sm">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ app.applicant.profile.jobseekerprofile.full_name }}</h5>
+                        <small>Applied: {{ app.applied_at|date:"M d, Y" }}</small>
+                    </div>
+                    <p class="mb-1">
+                        <strong>Status:</strong> 
+                        <span class="badge bg-info text-dark">{{ app.get_status_display }}</span>
+                    </p>
+                    
+                    <div class="d-flex gap-2 my-2">
+                        
+                        <a href="{% url 'accounts.public_profile' app.applicant.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user"></i> View Profile
+                        </a>
+
+                        {% if app.applicant.profile.jobseekerprofile.resume %}
+                            <a href="{{ app.applicant.profile.jobseekerprofile.resume.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                                <i class="fas fa-file-pdf"></i> View Resume
+                            </a>
+                        {% endif %}
+                    </div>
+                    
+                    <hr>
+                    <p><strong>Cover Letter:</strong></p>
+                    <p style="white-space: pre-wrap;">{{ app.cover_letter }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            There are no applications for this job yet.
+        </div>
+    {% endif %}
+    
+    <a href="{% url 'jobpostings:my_posted_jobs' %}" class="btn btn-secondary mt-3">&larr; Back to My Posted Jobs</a>
+</div>
+{% endblock content %}

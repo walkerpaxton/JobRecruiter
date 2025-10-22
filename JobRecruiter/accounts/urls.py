@@ -9,4 +9,5 @@ urlpatterns = [
     path('select/', views.select_account_view, name='accounts.account_select'),
     path('profile/create/jobseeker/', views.create_jobseeker_profile_view, name='accounts.create_jobseeker_profile'),
     path('profile/create/employer/', views.create_employer_profile_view, name='accounts.create_employer_profile'),
+    path('jobseeker/<int:user_id>/', views.public_profile_view, name='accounts.public_profile'),
 ]

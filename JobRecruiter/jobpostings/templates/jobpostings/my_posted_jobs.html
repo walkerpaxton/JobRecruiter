@@ -24,6 +24,10 @@
                     <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-primary btn-sm">View Details</a>
                     
                     <a href="{% url 'jobpostings:edit' job.id %}" class="btn btn-secondary btn-sm">Edit Job</a>
+
+                    <a href="{% url 'jobpostings:view_applicants' job.id %}" class="btn btn-info btn-sm"></a>
+                        View Applicants ({{ job.applications.count }})
+                    </a>
                     
                     </div>
             {% endfor %}
