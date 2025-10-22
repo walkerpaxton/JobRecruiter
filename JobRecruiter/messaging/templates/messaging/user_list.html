@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-users"></i> Start a Conversation</h2>
+                <a href="{% url 'messaging:inbox' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Inbox
+                </a>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <form method="get" class="d-flex">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control" 
+                                   placeholder="Search by name, username, company, job title, or industry..." 
+                                   value="{{ search_query }}"
+                                   autocomplete="off">
+                            {% if search_query %}
+                                <a href="{% url 'messaging:user_list' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Clear
+                                </a>
+                            {% endif %}
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if search_query %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Search results for "<strong>{{ search_query }}</strong>" 
+                    ({{ user_profiles|length }} result{{ user_profiles|length|pluralize }})
+                </div>
+            {% endif %}
+            
+            {% if user_profiles %}
+                <div class="row">
+                    {% for user_profile in user_profiles %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if user_profile.profile and user_profile.profile.account_type == 'jobseeker' and user_profile.profile.jobseekerprofile.profile_picture %}
+                                            <img src="{{ user_profile.profile.jobseekerprofile.profile_picture.url }}" 
+                                                 class="rounded-circle" width="50" height="50" alt="Profile">
+                                        {% elif user_profile.profile and user_profile.profile.account_type == 'employer' and user_profile.profile.employerprofile.company_logo %}
+                                            <img src="{{ user_profile.profile.employerprofile.company_logo.url }}" 
+                                                 class="rounded-circle" width="50" height="50" alt="Company Logo">
+                                        {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1">{{ user_profile.display_name }}</h6>
+                                        <small class="text-muted">@{{ user_profile.user.username }}</small>
+                                        {% if user_profile.profile %}
+                                            <div class="mt-1">
+                                                <span class="badge bg-{% if user_profile.profile.account_type == 'jobseeker' %}success{% else %}info{% endif %}">
+                                                    {{ user_profile.profile.get_account_type_display }}
+                                                </span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <a href="{% url 'messaging:start_conversation' user_profile.user.id %}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-comment"></i> Message
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    {% if search_query %}
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No users found</h4>
+                        <p class="text-muted">No users match your search for "<strong>{{ search_query }}</strong>".</p>
+                        <p class="text-muted">Try searching with different keywords or <a href="{% url 'messaging:user_list' %}">view all users</a>.</p>
+                    {% else %}
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No users found</h4>
+                        <p class="text-muted">There are no other users to message.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+// Enhanced search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="search"]');
+    const searchForm = document.querySelector('form');
+    
+    // Auto-submit form after user stops typing (debounced)
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            if (searchInput.value.length > 2 || searchInput.value.length === 0) {
+                searchForm.submit();
+            }
+        }, 500); // Wait 500ms after user stops typing
+    });
+    
+    // Clear search when clicking the clear button
+    const clearButton = document.querySelector('a[href*="user_list"]');
+    if (clearButton) {
+        clearButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchInput.value = '';
+            searchForm.submit();
+        });
+    }
+    
+    // Focus on search input
+    searchInput.focus();
+});
+</script>
+{% endblock %}

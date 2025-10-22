@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "home",
     "accounts",
     "jobpostings",
-
+    "messaging",
 ]
 
 MIDDLEWARE = [
@@ -68,6 +68,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "messaging.context_processors.unread_message_count",
             ],
         },
     },

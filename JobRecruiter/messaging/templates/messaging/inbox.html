@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-envelope"></i> Messages</h2>
+                <a href="{% url 'messaging:user_list' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Message
+                </a>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <form method="get" class="d-flex">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control" 
+                                   placeholder="Search conversations by name or message content..." 
+                                   value="{{ search_query }}"
+                                   autocomplete="off">
+                            {% if search_query %}
+                                <a href="{% url 'messaging:inbox' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Clear
+                                </a>
+                            {% endif %}
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if search_query %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Search results for "<strong>{{ search_query }}</strong>" 
+                    ({{ conversations|length }} conversation{{ conversations|length|pluralize }})
+                </div>
+            {% endif %}
+            
+            {% if conversations %}
+                <div class="list-group">
+                    {% for conversation in conversations %}
+                        <a href="{% url 'messaging:conversation_detail' conversation.id %}" 
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">
+                                    {{ conversation.get_other_participant.username }}
+                                </div>
+                                {% if conversation.get_latest_message %}
+                                    <small class="text-muted">
+                                        {{ conversation.get_latest_message.content|truncatechars:50 }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                {% if conversation.get_latest_message %}
+                                    <small class="text-muted d-block">
+                                        {{ conversation.get_latest_message.timestamp|date:"M d, Y H:i" }}
+                                    </small>
+                                {% endif %}
+                                {% if conversation.unread_count > 0 %}
+                                    <span class="badge bg-primary rounded-pill">{{ conversation.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    {% if search_query %}
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No conversations found</h4>
+                        <p class="text-muted">No conversations match your search for "<strong>{{ search_query }}</strong>".</p>
+                        <p class="text-muted">Try searching with different keywords or <a href="{% url 'messaging:inbox' %}">view all conversations</a>.</p>
+                    {% else %}
+                        <i class="fas fa-envelope-open fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No messages yet</h4>
+                        <p class="text-muted">Start a conversation with someone!</p>
+                        <a href="{% url 'messaging:user_list' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Send Your First Message
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+// Enhanced search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="search"]');
+    const searchForm = document.querySelector('form');
+    
+    if (searchInput && searchForm) {
+        // Auto-submit form after user stops typing (debounced)
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                if (searchInput.value.length > 2 || searchInput.value.length === 0) {
+                    searchForm.submit();
+                }
+            }, 500); // Wait 500ms after user stops typing
+        });
+        
+        // Clear search when clicking the clear button
+        const clearButton = document.querySelector('a[href*="inbox"]');
+        if (clearButton) {
+            clearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchInput.value = '';
+                searchForm.submit();
+            });
+        }
+        
+        // Focus on search input
+        searchInput.focus();
+    }
+});
+</script>
+{% endblock %}
