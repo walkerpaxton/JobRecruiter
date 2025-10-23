@@ -199,6 +199,25 @@ def job_edit_view(request, job_id: int):
     
     return render(request, 'jobpostings/edit_job.html', {'form': form, 'job': job})
 
+@login_required
+def job_delete_view(request, job_id: int):
+    job = get_object_or_404(JobPosting, id=job_id)
+    
+    # Security check: ensure the user is the one who posted the job
+    if job.posted_by != request.user:
+        messages.error(request, 'You are not authorized to delete this job.')
+        return redirect('jobpostings:list')
+    
+    if request.method == 'POST':
+        job_title = job.title
+        job.delete()
+        messages.success(request, f'Job posting "{job_title}" has been deleted successfully.')
+        return redirect('jobpostings:list')
+    
+    # If GET request, redirect to list page (delete should be POST only)
+    messages.warning(request, 'Invalid request method.')
+    return redirect('jobpostings:list')
+
 
 # In jobpostings/views.py
 
@@ -406,10 +425,29 @@ def pipeline_view(request, job_id):
         else:
             applications_by_stage[first_stage.id]['applications'] = list(applications_by_stage[first_stage.id]['applications']) + list(unassigned_applications)
 
+    # Calculate statistics
+    in_progress_count = 0
+    hired_count = 0
+    rejected_count = 0
+    
+    for stage in pipeline_stages:
+        stage_apps = applications_by_stage.get(stage.id, {}).get('applications', [])
+        count = len(stage_apps)
+        
+        if stage.is_final_positive:
+            hired_count += count
+        elif stage.is_final_negative:
+            rejected_count += count
+        else:
+            in_progress_count += count
+
     context = {
         'job': job,
         'pipeline_stages': pipeline_stages,
         'applications_by_stage': applications_by_stage,
+        'in_progress_count': in_progress_count,
+        'hired_count': hired_count,
+        'rejected_count': rejected_count,
     }
 
     return render(request, 'jobpostings/pipeline.html', context)

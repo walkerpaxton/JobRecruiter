@@ -76,6 +76,13 @@
 							<a href="{% url 'jobpostings:edit' job.id %}" class="btn btn-outline-warning btn-sm">
 								<i class="fas fa-edit"></i> Edit
 							</a>
+							<form method="POST" action="{% url 'jobpostings:delete' job.id %}" style="display: inline;" 
+							      onsubmit="return confirm('Are you sure you want to delete this job posting? This action cannot be undone.')">
+								{% csrf_token %}
+								<button type="submit" class="btn btn-outline-danger btn-sm">
+									<i class="fas fa-trash"></i> Delete
+								</button>
+							</form>
 							{% endif %}
 						</div>
 					</div>
