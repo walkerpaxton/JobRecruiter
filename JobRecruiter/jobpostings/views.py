@@ -3,8 +3,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.urls import reverse
 from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+import json
 from accounts.models import Profile, JobSeekerProfile, EmployerProfile
-from .models import JobPosting, Application
+from .models import JobPosting, Application, PipelineStage
 from .forms import JobPostingForm, ApplicationForm
 
 US_STATE_NAMES = {
@@ -358,3 +363,176 @@ def view_applicants(request, job_id):
 
     # 5. Render the new template we are about to create
     return render(request, 'jobpostings/view_applicants.html', context)
+
+
+@login_required
+def pipeline_view(request, job_id):
+    """
+    Display the Kanban board pipeline for managing applicants of a specific job.
+    """
+    # Get the job post, ensuring it exists
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    # Security Check 1: Ensure the user is an employer
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('home.index')
+
+    # Security Check 2: Ensure the employer owns this job posting
+    if job.posted_by != request.user:
+        messages.error(request, 'This is not your job posting.')
+        return redirect('jobpostings:my_posted_jobs')
+
+    # Get all pipeline stages
+    pipeline_stages = PipelineStage.objects.all().order_by('order')
+    
+    # Get all applications for this job, organized by pipeline stage
+    applications_by_stage = {}
+    for stage in pipeline_stages:
+        applications_by_stage[stage.id] = {
+            'stage': stage,
+            'applications': job.applications.filter(pipeline_stage=stage).order_by('-applied_at')
+        }
+    
+    # Also get applications without a pipeline stage (should be assigned to first stage)
+    unassigned_applications = job.applications.filter(pipeline_stage__isnull=True).order_by('-applied_at')
+    if unassigned_applications.exists() and pipeline_stages.exists():
+        first_stage = pipeline_stages.first()
+        if first_stage.id not in applications_by_stage:
+            applications_by_stage[first_stage.id] = {
+                'stage': first_stage,
+                'applications': unassigned_applications
+            }
+        else:
+            applications_by_stage[first_stage.id]['applications'] = list(applications_by_stage[first_stage.id]['applications']) + list(unassigned_applications)
+
+    context = {
+        'job': job,
+        'pipeline_stages': pipeline_stages,
+        'applications_by_stage': applications_by_stage,
+    }
+
+    return render(request, 'jobpostings/pipeline.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def update_application_stage(request, application_id):
+    """
+    Update the pipeline stage of an application via AJAX.
+    """
+    try:
+        application = get_object_or_404(Application, id=application_id)
+        
+        # Security check: ensure the user owns the job posting
+        if application.job_posting.posted_by != request.user:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+        # Parse the request data
+        data = json.loads(request.body)
+        new_stage_id = data.get('stage_id')
+        
+        if new_stage_id:
+            new_stage = get_object_or_404(PipelineStage, id=new_stage_id)
+            application.pipeline_stage = new_stage
+        else:
+            application.pipeline_stage = None
+        
+        application.stage_updated_at = timezone.now()
+        application.save()
+        
+        return JsonResponse({
+            'success': True,
+            'stage_name': application.pipeline_stage.name if application.pipeline_stage else 'Unassigned',
+            'stage_color': application.pipeline_stage.color if application.pipeline_stage else '#6B7280',
+            'updated_at': application.stage_updated_at.strftime('%Y-%m-%d %H:%M')
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def update_application_notes(request, application_id):
+    """
+    Update the notes for an application via AJAX.
+    """
+    try:
+        application = get_object_or_404(Application, id=application_id)
+        
+        # Security check: ensure the user owns the job posting
+        if application.job_posting.posted_by != request.user:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+        # Parse the request data
+        data = json.loads(request.body)
+        notes = data.get('notes', '')
+        
+        application.notes = notes
+        application.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def application_detail_modal(request, application_id):
+    """
+    Return application details for modal display.
+    """
+    try:
+        application = get_object_or_404(Application, id=application_id)
+        
+        # Security check: ensure the user owns the job posting
+        if application.job_posting.posted_by != request.user:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+        # Get applicant profile information
+        applicant_name = application.get_applicant_name()
+        applicant_email = application.get_applicant_email()
+        
+        # Try to get jobseeker profile for additional details
+        jobseeker_profile = None
+        try:
+            if application.applicant.profile.account_type == 'jobseeker':
+                jobseeker_profile = application.applicant.profile.jobseekerprofile
+        except:
+            pass
+        
+        return JsonResponse({
+            'success': True,
+            'application': {
+                'id': application.id,
+                'applicant_name': applicant_name,
+                'applicant_email': applicant_email,
+                'cover_letter': application.cover_letter,
+                'notes': application.notes,
+                'applied_at': application.applied_at.strftime('%Y-%m-%d %H:%M'),
+                'stage_updated_at': application.stage_updated_at.strftime('%Y-%m-%d %H:%M'),
+                'pipeline_stage': {
+                    'id': application.pipeline_stage.id if application.pipeline_stage else None,
+                    'name': application.pipeline_stage.name if application.pipeline_stage else 'Unassigned',
+                    'color': application.pipeline_stage.color if application.pipeline_stage else '#6B7280',
+                } if application.pipeline_stage else None,
+                'jobseeker_profile': {
+                    'location': jobseeker_profile.location if jobseeker_profile else '',
+                    'phone': jobseeker_profile.phone if jobseeker_profile else '',
+                    'linkedin': jobseeker_profile.linkedin if jobseeker_profile else '',
+                    'summary': jobseeker_profile.summary if jobseeker_profile else '',
+                    'technical_skills': jobseeker_profile.technical_skills if jobseeker_profile else '',
+                    'soft_skills': jobseeker_profile.soft_skills if jobseeker_profile else '',
+                    'current_job': jobseeker_profile.current_job if jobseeker_profile else '',
+                    'company': jobseeker_profile.company if jobseeker_profile else '',
+                    'experience_years': jobseeker_profile.experience_years if jobseeker_profile else '',
+                    'resume_url': jobseeker_profile.resume.url if jobseeker_profile and jobseeker_profile.resume else None,
+                } if jobseeker_profile else None,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class JobPosting(models.Model):
@@ -54,6 +55,25 @@ class JobPosting(models.Model):
         return ", ".join(part for part in parts if part) or self.location_display()
 
 
+class PipelineStage(models.Model):
+    """
+    Represents a stage in the hiring pipeline (e.g., Applied, Phone Screen, Interview, Offer, etc.)
+    """
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    color = models.CharField(max_length=7, default='#6B7280', help_text="Hex color code for the stage")
+    order = models.PositiveIntegerField(default=0, help_text="Order of stages in the pipeline")
+    is_final_positive = models.BooleanField(default=False, help_text="Is this a final positive outcome?")
+    is_final_negative = models.BooleanField(default=False, help_text="Is this a final negative outcome?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return self.name
+
+
 class Application(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -67,8 +87,11 @@ class Application(models.Model):
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
     cover_letter = models.TextField(help_text="Write a tailored cover letter for this specific position")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    pipeline_stage = models.ForeignKey(PipelineStage, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
+    notes = models.TextField(blank=True, help_text="Internal notes about this application")
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    stage_updated_at = models.DateTimeField(default=timezone.now, help_text="When the pipeline stage was last updated")
     
     class Meta:
         unique_together = ['job_posting', 'applicant']
@@ -76,3 +99,18 @@ class Application(models.Model):
     
     def __str__(self):
         return f"{self.applicant.username} applied to {self.job_posting.title}"
+    
+    def get_applicant_name(self):
+        """Get the applicant's display name"""
+        try:
+            profile = self.applicant.profile
+            if profile.account_type == 'jobseeker':
+                jobseeker_profile = profile.jobseekerprofile
+                return jobseeker_profile.full_name or jobseeker_profile.preferred_name or self.applicant.username
+        except:
+            pass
+        return self.applicant.username
+    
+    def get_applicant_email(self):
+        """Get the applicant's email"""
+        return self.applicant.email
