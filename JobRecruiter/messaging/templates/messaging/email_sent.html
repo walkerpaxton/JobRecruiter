@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="fas fa-paper-plane"></i> Sent Emails</h3>
+                    <a href="{% url 'messaging:compose_email' %}" class="btn btn-light">
+                        <i class="fas fa-plus"></i> Compose Email
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if sent_emails %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>To</th>
+                                        <th>Subject</th>
+                                        <th>Date Sent</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for email in sent_emails %}
+                                    <tr>
+                                        <td><strong>{{ email.recipient.username }}</strong></td>
+                                        <td>{{ email.subject }}</td>
+                                        <td>{{ email.sent_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <span class="badge bg-success">Sent</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'messaging:view_email' email.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No emails sent yet</h4>
+                            <p class="text-muted">You haven't sent any emails yet.</p>
+                            <a href="{% url 'messaging:compose_email' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Compose Your First Email
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

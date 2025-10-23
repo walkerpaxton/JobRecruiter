@@ -138,3 +138,56 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATICFILES_DIRS = [
     BASE_DIR / 'JobRecruiter/static/',
 ]
+
+# Email Configuration
+# All emails will be sent from a single generic email account
+# The actual sender's information will be included in the email body
+
+# For testing: emails will be printed to console
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# For production: uncomment the line below and configure SMTP settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# Configure your generic email account (this will send ALL emails):
+
+# Option 1: Gmail (requires App Password)
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sharafkabir302@gmail.com'  # Replace with your generic Gmail address
+EMAIL_HOST_PASSWORD = 'qzlmckicepunytri'
+  # Replace with your Gmail App Password (not your regular password!)
+DEFAULT_FROM_EMAIL = 'JobRecruiter <sharafkabir302@gmail.com>'  # Replace with your generic Gmail address
+
+# Option 2: Outlook/Hotmail (uncomment these and comment out Gmail settings above)
+# EMAIL_HOST = 'smtp-mail.outlook.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-generic-email@outlook.com'  # Replace with your generic Outlook address
+# EMAIL_HOST_PASSWORD = 'your-password'  # Replace with your Outlook password
+# DEFAULT_FROM_EMAIL = 'JobRecruiter <your-generic-email@outlook.com>'  # Replace with your generic Outlook address
+
+# Option 3: Yahoo (uncomment these and comment out Gmail settings above)
+# EMAIL_HOST = 'smtp.mail.yahoo.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-generic-email@yahoo.com'  # Replace with your generic Yahoo address
+# EMAIL_HOST_PASSWORD = 'your-app-password'  # Replace with your Yahoo App Password
+# DEFAULT_FROM_EMAIL = 'JobRecruiter <your-generic-email@yahoo.com>'  # Replace with your generic Yahoo address
+
+# For development/testing only (emails print to console):
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Alternative SMTP providers:
+# For Outlook/Hotmail:
+# EMAIL_HOST = 'smtp-mail.outlook.com'
+# EMAIL_PORT = 587
+
+# For Yahoo:
+# EMAIL_HOST = 'smtp.mail.yahoo.com'
+# EMAIL_PORT = 587
+
+# For custom SMTP server:
+# EMAIL_HOST = 'your-smtp-server.com'
+# EMAIL_PORT = 587
