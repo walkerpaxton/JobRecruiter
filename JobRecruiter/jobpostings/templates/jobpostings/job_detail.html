@@ -32,9 +32,16 @@
 							<p><span class="badge bg-success">You have already applied to this job</span></p>
 						{% endif %}
 					{% endif %}
-					<p><a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-outline-info">
-						<i class="fas fa-map-marker-alt"></i> Show on Map
-					</a></p>
+					<p>
+						<a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-outline-info">
+							<i class="fas fa-map-marker-alt"></i> Show on Map
+						</a>
+						{% if user.is_authenticated %}
+							<a href="{% url 'messaging:start_conversation' job.employer.id %}" class="btn btn-outline-success">
+								<i class="fas fa-envelope"></i> Message Employer
+							</a>
+						{% endif %}
+					</p>
 			{% if job.application_url %}
 			<p><a href="{{ job.application_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">Apply on Company Site</a></p>
 			{% elif job.application_email %}
