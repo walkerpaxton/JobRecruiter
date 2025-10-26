@@ -6,7 +6,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Max
 from django.utils import timezone
-from .models import Conversation, Message, MessageNotification
+from .models import Conversation, Message, MessageNotification, EmailMessage
+from .forms import EmailComposeForm, EmailDraftForm
 from accounts.models import Profile
 
 
@@ -231,3 +232,288 @@ def get_unread_count(request):
     ).exclude(sender=request.user).count()
     
     return JsonResponse({'unread_count': unread_count})
+
+
+# Email Views
+@login_required
+def email_inbox(request):
+    """
+    Display the user's email inbox with received emails.
+    """
+    received_emails = EmailMessage.objects.filter(
+        recipient=request.user,
+        status='sent'
+    ).order_by('-sent_at')
+    
+    context = {
+        'received_emails': received_emails,
+    }
+    return render(request, 'messaging/email_inbox.html', context)
+
+
+@login_required
+def email_sent(request):
+    """
+    Display emails sent by the current user.
+    """
+    sent_emails = EmailMessage.objects.filter(
+        sender=request.user,
+        status='sent'
+    ).order_by('-sent_at')
+    
+    context = {
+        'sent_emails': sent_emails,
+    }
+    return render(request, 'messaging/email_sent.html', context)
+
+
+@login_required
+def email_drafts(request):
+    """
+    Display draft emails for the current user.
+    """
+    draft_emails = EmailMessage.objects.filter(
+        sender=request.user,
+        status='draft'
+    ).order_by('-created_at')
+    
+    context = {
+        'draft_emails': draft_emails,
+    }
+    return render(request, 'messaging/email_drafts.html', context)
+
+
+@login_required
+def compose_email(request):
+    """
+    Compose a new email.
+    """
+    # Check if user has an email address
+    if not request.user.email:
+        messages.warning(request, "You need to add an email address to your account before you can send emails.")
+        return redirect('accounts.add_email')
+    
+    if request.method == 'POST':
+        form = EmailComposeForm(request.POST, sender=request.user)
+        if form.is_valid():
+            email = form.save(commit=False)
+            email.sender = request.user
+            email.save()
+            
+            # Check if user wants to send immediately or save as draft
+            if 'send' in request.POST:
+                if email.send_email():
+                    messages.success(request, f"Email sent successfully to {email.recipient.username}!")
+                    return redirect('messaging:email_sent')
+                else:
+                    messages.error(request, "Failed to send email. Please check the recipient's email address.")
+            else:
+                messages.success(request, "Email saved as draft.")
+                return redirect('messaging:email_drafts')
+    else:
+        form = EmailComposeForm(sender=request.user)
+    
+    context = {
+        'form': form,
+    }
+    return render(request, 'messaging/compose_email.html', context)
+
+
+@login_required
+def edit_draft(request, draft_id):
+    """
+    Edit a draft email.
+    """
+    draft = get_object_or_404(EmailMessage, id=draft_id, sender=request.user, status='draft')
+    
+    if request.method == 'POST':
+        form = EmailDraftForm(request.POST, instance=draft, sender=request.user)
+        if form.is_valid():
+            email = form.save()
+            
+            # Check if user wants to send immediately or save as draft
+            if 'send' in request.POST:
+                if email.send_email():
+                    messages.success(request, f"Email sent successfully to {email.recipient.username}!")
+                    return redirect('messaging:email_sent')
+                else:
+                    messages.error(request, "Failed to send email. Please check the recipient's email address.")
+            else:
+                messages.success(request, "Draft updated successfully.")
+                return redirect('messaging:email_drafts')
+    else:
+        form = EmailDraftForm(instance=draft, sender=request.user)
+    
+    context = {
+        'form': form,
+        'draft': draft,
+    }
+    return render(request, 'messaging/edit_draft.html', context)
+
+
+@login_required
+def view_email(request, email_id):
+    """
+    View a specific email.
+    """
+    email = get_object_or_404(EmailMessage, id=email_id)
+    
+    # Check if user has permission to view this email
+    if email.sender != request.user and email.recipient != request.user:
+        messages.error(request, "You don't have permission to view this email.")
+        return redirect('messaging:email_inbox')
+    
+    # Mark as read if it's a received email
+    if email.recipient == request.user and not email.is_read:
+        email.mark_as_read()
+    
+    context = {
+        'email': email,
+    }
+    return render(request, 'messaging/view_email.html', context)
+
+
+@login_required
+@require_POST
+def delete_email(request, email_id):
+    """
+    Delete an email (draft or sent).
+    """
+    email = get_object_or_404(EmailMessage, id=email_id, sender=request.user)
+    email.delete()
+    messages.success(request, "Email deleted successfully.")
+    
+    # Redirect based on email status
+    if email.status == 'draft':
+        return redirect('messaging:email_drafts')
+    else:
+        return redirect('messaging:email_sent')
+
+
+@login_required
+def send_draft(request, draft_id):
+    """
+    Send a draft email.
+    """
+    draft = get_object_or_404(EmailMessage, id=draft_id, sender=request.user, status='draft')
+    
+    if draft.send_email():
+        messages.success(request, f"Email sent successfully to {draft.recipient.username}!")
+    else:
+        messages.error(request, "Failed to send email. Please check the recipient's email address.")
+    
+    return redirect('messaging:email_drafts')
+
+
+@login_required
+def user_search_api(request):
+    """
+    API endpoint for searching users by username for email composition.
+    """
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'users': []})
+    
+    users = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(email__icontains=query)
+    ).exclude(id=request.user.id)[:10]
+    
+    user_data = []
+    for user in users:
+        try:
+            profile = user.profile
+            if profile.account_type == 'jobseeker':
+                jobseeker_profile = profile.jobseekerprofile
+                display_name = jobseeker_profile.full_name or user.username
+            elif profile.account_type == 'employer':
+                employer_profile = profile.employerprofile
+                display_name = employer_profile.company_name or user.username
+            else:
+                display_name = user.username
+        except:
+            display_name = user.username
+        
+        user_data.append({
+            'id': user.id,
+            'username': user.username,
+            'display_name': display_name,
+            'email': user.email,  # Use the Django User's email directly
+            'has_email': bool(user.email)
+        })
+    
+    return JsonResponse({'users': user_data})
+
+
+@login_required
+def debug_email_info(request, user_id):
+    """
+    Debug view to check email information for a user.
+    """
+    user = get_object_or_404(User, id=user_id)
+    
+    debug_info = {
+        'user_id': user.id,
+        'username': user.username,
+        'user_email': user.email,
+        'has_profile': hasattr(user, 'profile'),
+    }
+    
+    if hasattr(user, 'profile'):
+        profile = user.profile
+        debug_info['profile_account_type'] = profile.account_type
+        
+        if profile.account_type == 'jobseeker':
+            try:
+                jobseeker_profile = profile.jobseekerprofile
+                debug_info['jobseeker_email'] = jobseeker_profile.email
+                debug_info['jobseeker_profile_exists'] = True
+            except:
+                debug_info['jobseeker_profile_exists'] = False
+        elif profile.account_type == 'employer':
+            try:
+                employer_profile = profile.employerprofile
+                debug_info['employer_email'] = employer_profile.email
+                debug_info['employer_profile_exists'] = True
+            except:
+                debug_info['employer_profile_exists'] = False
+    
+    # Test the EmailMessage email retrieval
+    try:
+        from .models import EmailMessage
+        test_email = EmailMessage(sender=request.user, recipient=user, subject='test', body='test')
+        retrieved_email = test_email.get_recipient_email()
+        debug_info['retrieved_email'] = retrieved_email
+    except Exception as e:
+        debug_info['email_retrieval_error'] = str(e)
+    
+    return JsonResponse(debug_info)
+
+
+@login_required
+def test_email_sending(request):
+    """
+    Test view to send a test email to verify SMTP configuration.
+    """
+    if request.method == 'POST':
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        try:
+            # Send a test email to yourself
+            send_mail(
+                subject='[JobRecruiter] Test Email',
+                message='This is a test email to verify that your SMTP configuration is working correctly.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[request.user.email],
+                fail_silently=False,
+            )
+            messages.success(request, f"Test email sent successfully to {request.user.email}!")
+        except Exception as e:
+            messages.error(request, f"Failed to send test email: {str(e)}")
+        
+        return redirect('messaging:email_inbox')
+    
+    return render(request, 'messaging/test_email.html')

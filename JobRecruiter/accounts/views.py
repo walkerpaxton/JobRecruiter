@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 
 # --- Import our new forms and models ---
-from .forms import CustomUserCreationForm, CustomErrorList, JobSeekerProfileForm, EmployerProfileForm
+from .forms import CustomUserCreationForm, CustomErrorList, JobSeekerProfileForm, EmployerProfileForm, UserEmailForm
 from .models import Profile, JobSeekerProfile, EmployerProfile
 
 # --- User Authentication Views ---
@@ -50,6 +50,28 @@ def logout_view(request):
     auth_logout(request)
     return redirect('home.index')
 
+
+@login_required
+def add_email_view(request):
+    """
+    Allows users without email addresses to add one.
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        if email:
+            # Check if email is already taken
+            if User.objects.filter(email=email).exclude(id=request.user.id).exists():
+                messages.error(request, "This email address is already in use.")
+            else:
+                request.user.email = email
+                request.user.save()
+                messages.success(request, "Email address added successfully!")
+                return redirect('accounts.profile')
+        else:
+            messages.error(request, "Please enter a valid email address.")
+    
+    return render(request, 'accounts/add_email.html', {'title': 'Add Email Address'})
+
 # --- Profile Creation and Management Views ---
 
 @login_required
@@ -81,18 +103,34 @@ def create_jobseeker_profile_view(request):
     if profile.account_type != 'jobseeker':
         return redirect('home.index') # Or show an error
 
+    # Handle email form separately
+    email_form = UserEmailForm(instance=request.user)
+
     if request.method == 'POST':
-        form = JobSeekerProfileForm(request.POST, request.FILES)
-        if form.is_valid():
-            jobseeker_profile = form.save(commit=False)
-            jobseeker_profile.profile = profile
-            jobseeker_profile.save()
-            messages.success(request, 'Your Job Seeker profile has been created!')
-            return redirect('accounts.profile')
+        # Check if it's email form submission
+        if 'email_submit' in request.POST:
+            email_form = UserEmailForm(request.POST, instance=request.user)
+            if email_form.is_valid():
+                email_form.save()
+                messages.success(request, 'Email address updated successfully!')
+                return redirect('accounts.create_jobseeker_profile')
+        else:
+            # Handle profile form submission
+            form = JobSeekerProfileForm(request.POST, request.FILES)
+            if form.is_valid():
+                jobseeker_profile = form.save(commit=False)
+                jobseeker_profile.profile = profile
+                jobseeker_profile.save()
+                messages.success(request, 'Your Job Seeker profile has been created!')
+                return redirect('accounts.profile')
     else:
         form = JobSeekerProfileForm()
 
-    return render(request, 'accounts/profile_form.html', {'form': form, 'title': 'Create Your Job Seeker Profile'})
+    return render(request, 'accounts/profile_form.html', {
+        'form': form, 
+        'email_form': email_form,
+        'title': 'Create Your Job Seeker Profile'
+    })
 
 @login_required
 def create_employer_profile_view(request):
@@ -103,18 +141,34 @@ def create_employer_profile_view(request):
     if profile.account_type != 'employer':
         return redirect('home.index') # Or show an error
 
+    # Handle email form separately
+    email_form = UserEmailForm(instance=request.user)
+    
     if request.method == 'POST':
-        form = EmployerProfileForm(request.POST)
-        if form.is_valid():
-            employer_profile = form.save(commit=False)
-            employer_profile.profile = profile
-            employer_profile.save()
-            messages.success(request, 'Your Employer profile has been created!')
-            return redirect('accounts.profile')
+        # Check if it's email form submission
+        if 'email_submit' in request.POST:
+            email_form = UserEmailForm(request.POST, instance=request.user)
+            if email_form.is_valid():
+                email_form.save()
+                messages.success(request, 'Email address updated successfully!')
+                return redirect('accounts.create_employer_profile')
+        else:
+            # Handle profile form submission
+            form = EmployerProfileForm(request.POST)
+            if form.is_valid():
+                employer_profile = form.save(commit=False)
+                employer_profile.profile = profile
+                employer_profile.save()
+                messages.success(request, 'Your Employer profile has been created!')
+                return redirect('accounts.profile')
     else:
         form = EmployerProfileForm()
         
-    return render(request, 'accounts/profile_form.html', {'form': form, 'title': 'Create Your Employer Profile'})
+    return render(request, 'accounts/profile_form.html', {
+        'form': form, 
+        'email_form': email_form,
+        'title': 'Create Your Employer Profile'
+    })
 
 @login_required
 def profile_view(request):
@@ -161,16 +215,32 @@ def edit_profile_view(request):
     else:
         return redirect('home.index')
 
+    # Handle email form separately
+    email_form = UserEmailForm(instance=request.user)
+    
     if request.method == 'POST':
-        form = form_class(request.POST, request.FILES, instance=detailed_profile)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('accounts.profile')
+        # Check if it's email form submission
+        if 'email_submit' in request.POST:
+            email_form = UserEmailForm(request.POST, instance=request.user)
+            if email_form.is_valid():
+                email_form.save()
+                messages.success(request, 'Email address updated successfully!')
+                return redirect('accounts.edit_profile')
+        else:
+            # Handle profile form submission
+            form = form_class(request.POST, request.FILES, instance=detailed_profile)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Profile updated successfully!')
+                return redirect('accounts.profile')
     else:
         form = form_class(instance=detailed_profile)
 
-    return render(request, template_name, {'form': form, 'title': 'Edit Your Profile'})
+    return render(request, template_name, {
+        'form': form, 
+        'email_form': email_form,
+        'title': 'Edit Your Profile'
+    })
 
 @login_required
 def public_profile_view(request, user_id):

@@ -9,6 +9,35 @@
                     <h3 class="mb-0">{{ title }}</h3>
                 </div>
                 <div class="card-body">
+                    <!-- Email Section -->
+                    {% if email_form %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary border-bottom pb-2"><i class="fas fa-envelope"></i> Email Address</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="{{ email_form.email.id_for_label }}" class="form-label">Email Address *</label>
+                                    {{ email_form.email }}
+                                    {% if email_form.email.errors %}
+                                        <div class="text-danger">{{ email_form.email.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">This email will be used for receiving messages from other users.</div>
+                                </div>
+                                <button type="submit" name="email_submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Email
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <hr>
+                    {% endif %}
+                    
+                    <!-- Profile Form -->
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
@@ -26,6 +55,7 @@
                                 </div>
                                 <div class="col-md-6"><label class="form-label">Preferred Name</label>{{ form.preferred_name }}</div>
                             </div>
+                            
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
