@@ -1,564 +1,122 @@
-{# Django template - linter may show false positives for template variables #}
 {% extends 'base.html' %}
-{% load static %}
-{% load jobpostings_extras %}
+{% load jobpostings_extras %} {# Make sure you have the 'lookup' filter #}
 
 {% block title %}Pipeline - {{ job.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .kanban-board {
+    /* Minimal styles for our static board */
+    .kanban-board-container {
         width: 100%;
-        overflow-x: auto;
+        overflow-x: auto; /* Allows horizontal scrolling */
+        padding-bottom: 1rem; /* Space for scrollbar */
     }
-    
+    .kanban-board {
+        display: flex;
+        flex-wrap: nowrap; /* Keep columns in one row */
+        gap: 1.5rem; /* Space between columns */
+    }
     .kanban-column {
+        flex: 0 0 300px; /* Fixed width for columns, prevents shrinking */
         background-color: #f8f9fa;
         border-radius: 8px;
-        min-height: 400px;
         display: flex;
         flex-direction: column;
     }
-    
     .kanban-header {
-        padding: 15px;
-        border-radius: 8px 8px 0 0;
-        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 8px 8px 0 0; /* Rounded corners top */
     }
-    
     .kanban-body {
-        padding: 10px;
-        flex-grow: 1;
-        min-height: 200px;
-        background-color: #f8f9fa;
-        border-radius: 0 0 8px 8px;
+        padding: 1rem;
+        flex-grow: 1; /* Allows body to fill space */
+        min-height: 300px; /* Minimum height for visual */
+        overflow-y: auto; /* Allow vertical scroll within column if needed */
+        border-radius: 0 0 8px 8px; /* Rounded corners bottom */
     }
-    
-    .kanban-body.drag-over {
-        background-color: #e3f2fd;
-        border: 2px dashed #2196F3;
-    }
-    
     .kanban-card {
         background: white;
         border-radius: 6px;
-        padding: 0;
-        margin-bottom: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-        cursor: move;
-        transition: box-shadow 0.2s, transform 0.2s;
     }
-    
-    .kanban-card:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        transform: translateY(-2px);
+    /* Style for the top stat cards */
+    .stat-card .card-body {
+        padding: 1rem;
     }
-    
-    .kanban-card .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-        padding: 10px 12px;
-        border-radius: 6px 6px 0 0;
+    .stat-card h4 {
+        margin-bottom: 0.25rem;
     }
-    
-    .kanban-card .card-body {
-        padding: 12px;
-    }
-    
-    .notes-preview {
-        margin-top: 8px;
-        padding: 6px;
-        background-color: #fff3cd;
-        border-radius: 4px;
-    }
-    
-    .card.bg-primary,
-    .card.bg-success,
-    .card.bg-warning,
-    .card.bg-danger {
-        border: none;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .stat-card i {
+        opacity: 0.7;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-1">Pipeline: {{ job.title }}</h1>
-                    <p class="text-muted mb-0">{{ job.company_name }} • {{ job.location_display }}</p>
-                </div>
-                <div>
-                    <a href="{% url 'jobpostings:view_applicants' job.id %}" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-list"></i> List View
-                    </a>
-                    <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-outline-primary">
-                        <i class="fas fa-eye"></i> View Job
-                    </a>
-                </div>
-            </div>
-
-            <!-- Pipeline Stats -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h4 class="mb-0">{{ job.applications.count }}</h4>
-                                    <small>Total Applications</small>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="fas fa-users fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h4 class="mb-0">{{ in_progress_count }}</h4>
-                                    <small>In Progress</small>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="fas fa-clock fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h4 class="mb-0">{{ hired_count }}</h4>
-                                    <small>Hired</small>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="fas fa-check-circle fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-danger text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h4 class="mb-0">{{ rejected_count }}</h4>
-                                    <small>Rejected</small>
-                                </div>
-                                <div class="align-self-center">
-                                    <i class="fas fa-times-circle fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kanban Board -->
-            <div class="kanban-board">
-                <div class="row">
-                    {% for stage in pipeline_stages %}
-                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                        <div class="kanban-column">
-                            <!-- Django template variables in inline styles -->
-                            <div class="kanban-header" style="border-left: 4px solid {{ stage.color }}; background-color: rgba(0,0,0,0.05);">
-                                <h5 class="mb-1" style="color: {{ stage.color }};">{{ stage.name }}</h5>
-                                <small class="text-muted">
-                                    {% with stage_data=applications_by_stage|lookup:stage.id %}
-                                        {% if stage_data %}
-                                            {{ stage_data.applications|length }}
-                                        {% else %}
-                                            0
-                                        {% endif %}
-                                    {% endwith %} applications
-                                </small>
-                            </div>
-                            <div class="kanban-body" data-stage-id="{{ stage.id }}">
-                                {% with stage_data=applications_by_stage|lookup:stage.id %}
-                                    {% if stage_data %}
-                                        {% for application in stage_data.applications %}
-                                    <div class="kanban-card" data-application-id="{{ application.id }}" draggable="true">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">{{ application.get_applicant_name }}</h6>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                    <i class="fas fa-ellipsis-v"></i>
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    <!-- eslint-disable-next-line -->
-                                                    <li><a class="dropdown-item" href="#" onclick="viewApplicationDetails({{ application.id }})">
-                                                        <i class="fas fa-eye"></i> View Details
-                                                    </a></li>
-                                                    <!-- eslint-disable-next-line -->
-                                                    <li><a class="dropdown-item" href="#" onclick="editApplicationNotes({{ application.id }})">
-                                                        <i class="fas fa-edit"></i> Edit Notes
-                                                    </a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="card-body">
-                                            <p class="card-text small text-muted mb-2">
-                                                <i class="fas fa-envelope"></i> {{ application.get_applicant_email }}
-                                            </p>
-                                            <p class="card-text small">
-                                                Applied: {{ application.applied_at|date:"M d, Y" }}
-                                            </p>
-                                            {% if application.notes %}
-                                            <div class="notes-preview">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-sticky-note"></i> 
-                                                    {{ application.notes|truncatechars:50 }}
-                                                </small>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                        {% endfor %}
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Pipeline: {{ job.title }}</h1>
+            <p class="text-muted mb-0">{{ job.company_name }} • {{ job.location_display }}</p>
+        </div>
+        <div>
+            <a href="{% url 'jobpostings:view_applicants' job.id %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list"></i> List View
+            </a>
+            <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-eye"></i> View Job
+            </a>
         </div>
     </div>
-</div>
 
-<!-- Application Details Modal -->
-<div class="modal fade" id="applicationModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Application Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    
+
+    <div class="kanban-board-container">
+        <div class="kanban-board">
+            {% for stage in pipeline_stages %}
+            <div class="kanban-column">
+                <div class="kanban-header" style="border-top: 4px solid {{ stage.color }};">
+                    <h5 class="mb-1">{{ stage.name }}</h5>
+                    {% with stage_data=applications_by_stage|lookup:stage.id %}
+                        <small class="text-muted">
+                            {% if stage_data and stage_data.applications %}
+                                {{ stage_data.applications|length }}
+                            {% else %}
+                                0
+                            {% endif %}
+                            application{{ stage_data.applications|length|pluralize }}
+                        </small>
+                    {% endwith %}
+                </div>
+
+                <div class="kanban-body">
+                    {% with stage_data=applications_by_stage|lookup:stage.id %}
+                        {% if stage_data and stage_data.applications %}
+                            {% for application in stage_data.applications %}
+                            <div class="kanban-card">
+                                <h6 class="mb-2">{{ application.get_applicant_name }}</h6>
+                                <a href="{% url 'accounts.public_profile' application.applicant.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-user"></i> View Profile
+                                </a>
+                                {# You could add other small details here if needed #}
+                                {# <p class="small text-muted mt-1 mb-0">Applied: {{ application.applied_at|date:"M d" }}</p> #}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted small fst-italic">No applicants in this stage.</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
             </div>
-            <div class="modal-body" id="applicationModalBody">
-                <!-- Content will be loaded via AJAX -->
-            </div>
+            {% endfor %}
         </div>
     </div>
-</div>
 
-<!-- Edit Notes Modal -->
-<div class="modal fade" id="notesModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Application Notes</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="notesForm">
-                    <div class="mb-3">
-                        <label for="notesTextarea" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notesTextarea" rows="5" placeholder="Add internal notes about this application..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveApplicationNotes()">Save Notes</button>
-            </div>
-        </div>
-    </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
-<script>
-let currentApplicationId = null;
-
-// Drag and drop functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const cards = document.querySelectorAll('.kanban-card');
-    const columns = document.querySelectorAll('.kanban-body');
-
-    cards.forEach(card => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragend', handleDragEnd);
-    });
-
-    columns.forEach(column => {
-        column.addEventListener('dragover', handleDragOver);
-        column.addEventListener('drop', handleDrop);
-        column.addEventListener('dragenter', handleDragEnter);
-        column.addEventListener('dragleave', handleDragLeave);
-    });
-});
-
-function handleDragStart(e) {
-    e.target.style.opacity = '0.5';
-    e.dataTransfer.setData('text/plain', e.target.dataset.applicationId);
-}
-
-function handleDragEnd(e) {
-    e.target.style.opacity = '1';
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-}
-
-function handleDragEnter(e) {
-    e.preventDefault();
-    e.currentTarget.classList.add('drag-over');
-}
-
-function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    const column = e.currentTarget;
-    column.classList.remove('drag-over');
-    
-    const applicationId = e.dataTransfer.getData('text/plain');
-    const newStageId = column.dataset.stageId;
-    
-    if (newStageId) {
-        updateApplicationStage(applicationId, newStageId);
-    }
-}
-
-function updateApplicationStage(applicationId, stageId) {
-    fetch(`/jobpostings/application/${applicationId}/update-stage/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            stage_id: stageId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Move the card to the new column
-            const card = document.querySelector(`[data-application-id="${applicationId}"]`);
-            const newColumn = document.querySelector(`[data-stage-id="${stageId}"]`);
-            newColumn.appendChild(card);
-            
-            // Update the stage indicator
-            const stageIndicator = card.querySelector('.stage-indicator');
-            if (stageIndicator) {
-                stageIndicator.textContent = data.stage_name;
-                stageIndicator.style.color = data.stage_color;
-            }
-            
-            // Show success message
-            showToast('Application stage updated successfully!', 'success');
-        } else {
-            showToast('Error updating application stage: ' + data.error, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error updating application stage', 'error');
-    });
-}
-
-function viewApplicationDetails(applicationId) {
-    fetch(`/jobpostings/application/${applicationId}/detail/`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const app = data.application;
-            const modalBody = document.getElementById('applicationModalBody');
-            const stageBadgeHtml = app.pipeline_stage
-                ? `<span class="badge" style="background-color: ${app.pipeline_stage.color}">${app.pipeline_stage.name}</span>`
-                : '<span class="badge bg-secondary">Unassigned</span>';
-            
-            modalBody.innerHTML = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Applicant Information</h6>
-                        <p><strong>Name:</strong> ${app.applicant_name}</p>
-                        <p><strong>Email:</strong> ${app.applicant_email}</p>
-                        <p><strong>Applied:</strong> ${app.applied_at}</p>
-                        <p><strong>Current Stage:</strong> ${stageBadgeHtml}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Application Timeline</h6>
-                        <p><strong>Applied:</strong> ${app.applied_at}</p>
-                        <p><strong>Stage Updated:</strong> ${app.stage_updated_at}</p>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <h6>Cover Letter</h6>
-                <div class="border p-3 rounded bg-light">
-                    ${app.cover_letter.replace(/\n/g, '<br>')}
-                </div>
-                
-                ${app.jobseeker_profile ? `
-                <hr>
-                <h6>Candidate Profile</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Location:</strong> ${app.jobseeker_profile.location || 'Not specified'}</p>
-                        <p><strong>Phone:</strong> ${app.jobseeker_profile.phone || 'Not specified'}</p>
-                        <p><strong>Current Job:</strong> ${app.jobseeker_profile.current_job || 'Not specified'}</p>
-                        <p><strong>Company:</strong> ${app.jobseeker_profile.company || 'Not specified'}</p>
-                        <p><strong>Experience:</strong> ${app.jobseeker_profile.experience_years || 'Not specified'}</p>
-                    </div>
-                    <div class="col-md-6">
-                        ${app.jobseeker_profile.linkedin ? `<p><strong>LinkedIn:</strong> <a href="${app.jobseeker_profile.linkedin}" target="_blank">View Profile</a></p>` : ''}
-                        ${app.jobseeker_profile.resume_url ? `<p><strong>Resume:</strong> <a href="${app.jobseeker_profile.resume_url}" target="_blank">Download Resume</a></p>` : ''}
-                    </div>
-                </div>
-                
-                ${app.jobseeker_profile.summary ? `
-                <h6>Summary</h6>
-                <p>${app.jobseeker_profile.summary}</p>
-                ` : ''}
-                
-                ${app.jobseeker_profile.technical_skills ? `
-                <h6>Technical Skills</h6>
-                <p>${app.jobseeker_profile.technical_skills}</p>
-                ` : ''}
-                
-                ${app.jobseeker_profile.soft_skills ? `
-                <h6>Soft Skills</h6>
-                <p>${app.jobseeker_profile.soft_skills}</p>
-                ` : ''}
-                ` : ''}
-                
-                <hr>
-                
-                <h6>Internal Notes</h6>
-                <div class="border p-3 rounded bg-light">
-                    ${app.notes || '<em class="text-muted">No notes added yet</em>'}
-                </div>
-            `;
-            
-            const modal = new bootstrap.Modal(document.getElementById('applicationModal'));
-            modal.show();
-        } else {
-            showToast('Error loading application details: ' + data.error, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error loading application details', 'error');
-    });
-}
-
-function editApplicationNotes(applicationId) {
-    currentApplicationId = applicationId;
-    
-    // Load current notes
-    fetch(`/jobpostings/application/${applicationId}/detail/`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('notesTextarea').value = data.application.notes || '';
-            const modal = new bootstrap.Modal(document.getElementById('notesModal'));
-            modal.show();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error loading application notes', 'error');
-    });
-}
-
-function saveApplicationNotes() {
-    if (!currentApplicationId) return;
-    
-    const notes = document.getElementById('notesTextarea').value;
-    
-    fetch(`/jobpostings/application/${currentApplicationId}/update-notes/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            notes: notes
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Notes updated successfully!', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notesModal'));
-            modal.hide();
-            
-            // Update the notes preview in the card
-            const card = document.querySelector(`[data-application-id="${currentApplicationId}"]`);
-            const notesPreview = card.querySelector('.notes-preview');
-            if (notes) {
-                if (!notesPreview) {
-                    const notesDiv = document.createElement('div');
-                    notesDiv.className = 'notes-preview';
-                    card.querySelector('.card-body').appendChild(notesDiv);
-                }
-                const newNotesPreview = card.querySelector('.notes-preview');
-                newNotesPreview.innerHTML = `<small class="text-muted"><i class="fas fa-sticky-note"></i> ${notes.substring(0, 50)}${notes.length > 50 ? '...' : ''}</small>`;
-            } else if (notesPreview) {
-                notesPreview.remove();
-            }
-        } else {
-            showToast('Error updating notes: ' + data.error, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error updating notes', 'error');
-    });
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function showToast(message, type = 'info') {
-    // Create a simple toast notification
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    toast.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 5000);
-}
-</script>
 {% endblock %}

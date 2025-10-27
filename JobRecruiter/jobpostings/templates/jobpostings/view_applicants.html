@@ -13,36 +13,56 @@
 
     {% if applications %}
         <p>You have {{ applications.count }} application{{ applications.count|pluralize }}.</p>
-        
+
         <div class="list-group">
             {% for app in applications %}
                 <div class="list-group-item mb-3 shadow-sm">
                     <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ app.applicant.profile.jobseekerprofile.full_name }}</h5>
+                        <h5 class="mb-1">{{ app.get_applicant_name }}</h5> {# Use the helper method #}
                         <small>Applied: {{ app.applied_at|date:"M d, Y" }}</small>
                     </div>
-                    <p class="mb-1">
-                        <strong>Status:</strong> 
-                        <span class="badge bg-info text-dark">{{ app.get_status_display }}</span>
-                    </p>
-                    
+
+                    {# --- START CHANGES --- #}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        {# Display Current Stage #}
+                        <p class="mb-0">
+                            <strong>Current Stage:</strong>
+                            <span class="badge" style="background-color: {{ app.pipeline_stage.color|default:'#6c757d' }}; color: white; min-width: 80px; text-align: center;">
+                                {{ app.pipeline_stage.name|default:"Unassigned" }}
+                            </span>
+                        </p>
+
+                        {# Form to Move Stage #}
+                        <form action="{% url 'jobpostings:move_application_stage' app.id %}" method="POST" class="d-flex gap-2 align-items-center">
+                            {% csrf_token %}
+                            <select name="new_stage_id" class="form-select form-select-sm" style="width: auto;" aria-label="Move applicant stage">
+                                {% for stage in pipeline_stages %}
+                                    {# Ensure current stage is selected by default #}
+                                    <option value="{{ stage.id }}" {% if app.pipeline_stage.id == stage.id %}selected{% endif %}>
+                                        Move to: {{ stage.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Move</button>
+                        </form>
+                    </div>
+                    {# --- END CHANGES --- #}
+
+                    {# Applicant Action Buttons #}
                     <div class="d-flex gap-2 my-2">
-                        
-                        <a href="{% url 'accounts.public_profile' app.applicant.id %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'accounts.public_profile' app.applicant.id %}" class="btn btn-info btn-sm text-white">
                             <i class="fas fa-user"></i> View Profile
                         </a>
-
                         {% if app.applicant.profile.jobseekerprofile.resume %}
-                            <a href="{{ app.applicant.profile.jobseekerprofile.resume.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <a href="{{ app.applicant.profile.jobseekerprofile.resume.url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
                                 <i class="fas fa-file-pdf"></i> View Resume
                             </a>
                         {% endif %}
-                        
                         <a href="{% url 'messaging:start_conversation' app.applicant.id %}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-envelope"></i> Message
                         </a>
                     </div>
-                    
+
                     <hr>
                     <p><strong>Cover Letter:</strong></p>
                     <p style="white-space: pre-wrap;">{{ app.cover_letter }}</p>
@@ -50,11 +70,11 @@
             {% endfor %}
         </div>
     {% else %}
-        <div class="alert alert-info" role="alert">
+        <div class="alert alert-info" role-alert>
             There are no applications for this job yet.
         </div>
     {% endif %}
-    
+
     <a href="{% url 'jobpostings:my_posted_jobs' %}" class="btn btn-secondary mt-3">&larr; Back to My Posted Jobs</a>
 </div>
 {% endblock content %}

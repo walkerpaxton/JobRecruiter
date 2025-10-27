@@ -15,7 +15,9 @@ urlpatterns = [
 	path('map/', views.job_map_view, name='map'),
     path('my-applications/', views.job_seeker_applications, name='job_seeker_applications'),
     path('my-posted-jobs/', views.my_posted_jobs, name='my_posted_jobs'),
+    path('application/<int:app_id>/move/', views.move_application_stage, name='move_application_stage'),
     # AJAX endpoints for pipeline management
+
     path('application/<int:application_id>/update-stage/', views.update_application_stage, name='update_application_stage'),
     path('application/<int:application_id>/update-notes/', views.update_application_notes, name='update_application_notes'),
     path('application/<int:application_id>/detail/', views.application_detail_modal, name='application_detail_modal'),

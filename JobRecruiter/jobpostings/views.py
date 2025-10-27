@@ -374,10 +374,12 @@ def view_applicants(request, job_id):
 
     # 4. Get all applications for this job.
     all_applications = job.applications.all().order_by('-applied_at')
+    all_stages = PipelineStage.objects.all().order_by('order')
 
     context = {
         'job': job,
-        'applications': all_applications
+        'applications': all_applications,
+        'pipeline_stages': all_stages
     }
 
     # 5. Render the new template we are about to create
@@ -449,6 +451,7 @@ def pipeline_view(request, job_id):
         'hired_count': hired_count,
         'rejected_count': rejected_count,
     }
+    
 
     return render(request, 'jobpostings/pipeline.html', context)
 
@@ -574,3 +577,42 @@ def application_detail_modal(request, application_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+@login_required
+@require_http_methods(["POST"]) # Only allow POST requests
+def move_application_stage(request, app_id):
+    # 1. Get the application object
+    application = get_object_or_404(Application, id=app_id)
+    job = application.job_posting # Get the related job for redirects
+
+    # 2. Security Check: Ensure the current user owns the job posting
+    if job.posted_by != request.user:
+        messages.error(request, 'You do not have permission to modify this application.')
+        # Redirect to a safe page, like their list of jobs
+        return redirect('jobpostings:my_posted_jobs')
+
+    # 3. Get the selected stage ID from the form's <select> input
+    new_stage_id = request.POST.get('new_stage_id')
+
+    # 4. Validate and find the PipelineStage object
+    if not new_stage_id:
+        messages.error(request, 'No stage was selected.')
+        # Redirect back to the applicant list if nothing was chosen
+        return redirect('jobpostings:view_applicants', job_id=job.id)
+
+    try:
+        new_stage = PipelineStage.objects.get(id=new_stage_id)
+    except PipelineStage.DoesNotExist:
+        messages.error(request, 'Invalid stage selected.')
+        return redirect('jobpostings:view_applicants', job_id=job.id)
+
+    # 5. Update the application's stage and save
+    application.pipeline_stage = new_stage
+    application.stage_updated_at = timezone.now() # Update timestamp
+    application.save()
+
+    messages.success(request, f"Moved {application.get_applicant_name()} to '{new_stage.name}'.")
+
+
+    # 6. Redirect the user back to the pipeline view to see the change
+    return redirect('jobpostings:pipeline', job_id=job.id)
