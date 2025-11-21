@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Filter Panel -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter"></i> Filter Applicants</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET">
+                        <div class="mb-3">
+                            <label for="job_id" class="form-label">Filter by Job</label>
+                            <select class="form-select" id="job_id" name="job_id" onchange="this.form.submit()">
+                                <option value="">All Jobs</option>
+                                {% for job in employer_jobs %}
+                                    <option value="{{ job.id }}" {% if selected_job_id == job.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ job.title }} ({{ job.applications.count }} applicants)
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'jobpostings:my_posted_jobs' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-list"></i> My Jobs
+                            </a>
+                            <button class="btn btn-outline-info btn-sm" onclick="centerMap()">
+                                <i class="fas fa-crosshairs"></i> My Location
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Applicant Results -->
+            <div class="card">
+                <div class="card-header">
+                    <h6>Applicants with Locations: {{ applicant_markers|length }}</h6>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% for applicant in applicant_markers %}
+                    <div class="applicant-item mb-2 p-2 border rounded">
+                        <h6 class="mb-1">{{ applicant.name }}</h6>
+                        <p class="mb-1 text-muted"><strong>Job:</strong> {{ applicant.job_title }}</p>
+                        <p class="mb-1 text-muted"><strong>Company:</strong> {{ applicant.company }}</p>
+                        <p class="mb-1 text-muted"><strong>Location:</strong> {{ applicant.location }}</p>
+                        <p class="mb-1">
+                            <span class="badge" style="background-color: {{ applicant.pipeline_stage_color }}; color: white;">
+                                {{ applicant.pipeline_stage }}
+                            </span>
+                        </p>
+                        <p class="mb-1 text-muted"><small>Applied: {{ applicant.applied_at }}</small></p>
+                        <div class="d-flex gap-1">
+                            <a href="{{ applicant.profile_url }}" class="btn btn-sm btn-outline-primary">
+                                View Profile
+                            </a>
+                            <button class="btn btn-sm btn-outline-info" onclick="showApplicantOnMap({{ applicant.id }})">
+                                <i class="fas fa-map-marker-alt"></i> Show on Map
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-info">
+                        <p class="mb-1"><strong>No applicants with shared locations found.</strong></p>
+                        {% if total_applications > 0 %}
+                            <p class="mb-0 small">
+                                You have {{ total_applications }} total application{{ total_applications|pluralize }}, 
+                                but none have shared their location. Applicants need to:
+                                <ul class="small mb-0">
+                                    <li>Have a location entered in their profile</li>
+                                    <li>Have "Show location to recruiters" enabled</li>
+                                </ul>
+                            </p>
+                        {% else %}
+                            <p class="mb-0 small">You don't have any applications yet.</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Map Panel -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-map"></i> Applicant Locations</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 600px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{{ applicant_markers|json_script:"applicant-markers-data" }}
+
+<script>
+/* eslint-disable */
+var map;
+var markers = [];
+var applicantData = JSON.parse(document.getElementById('applicant-markers-data').textContent);
+// Group applicants by location (rounded to 4 decimal places for grouping)
+var locationGroups = {};
+
+function initMap() {
+    map = L.map('map').setView([40.7128, -74.0060], 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Debug: Log applicant data
+    console.log('Applicant data loaded:', applicantData.length, 'applicants');
+    if (applicantData.length > 0) {
+        console.log('Sample applicant:', applicantData[0]);
+    }
+
+    // Check if we have a specific applicant to highlight
+    var highlightedApplicantId = '{{ applicant_id|escapejs }}';
+
+    if (highlightedApplicantId && highlightedApplicantId.trim() !== '') {
+        // Center on the specific applicant location
+        var targetApplicant = null;
+        for (var i = 0; i < applicantData.length; i++) {
+            if (applicantData[i].id == highlightedApplicantId) {
+                targetApplicant = applicantData[i];
+                break;
+            }
+        }
+        if (targetApplicant) {
+            // Pass null for location since we have the applicant - it will use their candidates
+            centerMapOnLocation(null, highlightedApplicantId);
+        } else {
+            addApplicantMarkers();
+        }
+    } else {
+        // If no specific applicant, add all markers and fit to bounds
+        addApplicantMarkers();
+    }
+}
+
+function addApplicantMarkers() {
+    if (markers.length > 0) {
+        return;
+    }
+
+    // Add small delay between requests to respect Nominatim rate limiting
+    for (var i = 0; i < applicantData.length; i++) {
+        var applicant = applicantData[i];
+        // Geocode each applicant location with a small delay to avoid rate limiting
+        setTimeout(function(app) {
+            return function() {
+                geocodeApplicantLocation(app);
+            };
+        }(applicant), i * 200); // 200ms delay between each request
+    }
+}
+
+function geocodeApplicantLocation(applicant) {
+    // Use geocode_candidates if available, otherwise fall back to geocode_query
+    var candidates = applicant.geocode_candidates || [];
+    if (candidates.length === 0 && applicant.geocode_query) {
+        candidates = [applicant.geocode_query];
+    }
+    
+    if (candidates.length === 0) {
+        console.log('No geocode candidates for applicant ' + applicant.id + ' (' + applicant.name + ')');
+        return;
+    }
+
+    console.log('Geocoding applicant:', applicant.name, 'Location:', applicant.location);
+    console.log('Candidates (' + candidates.length + '):', candidates);
+    
+    // Try geocoding with multiple candidates
+    attemptGeocode(applicant, candidates, 0);
+}
+
+function attemptGeocode(applicant, candidates, attemptIndex) {
+    if (!candidates || attemptIndex >= candidates.length) {
+        console.log('Geocoding failed for applicant ' + applicant.id + ' (' + applicant.name + '): All candidates exhausted');
+        console.log('Tried candidates:', candidates);
+        return;
+    }
+
+    var query = candidates[attemptIndex];
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=1';
+
+    fetch(geocodingUrl)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                var lat = parseFloat(data[0].lat);
+                var lng = parseFloat(data[0].lon);
+                console.log('Geocoding successful for', applicant.name, 'using query "' + query + '":', lat, lng);
+                createApplicantMarker(applicant, lat, lng);
+            } else {
+                // Try next candidate
+                console.log('Geocoding failed for candidate "' + query + '", trying next...');
+                attemptGeocode(applicant, candidates, attemptIndex + 1);
+            }
+        })
+        .catch(function(error) {
+            console.log('Geocoding error for applicant ' + applicant.id + ' (' + applicant.name + '): ' + error);
+            attemptGeocode(applicant, candidates, attemptIndex + 1);
+        });
+}
+
+function createApplicantMarker(applicant, lat, lng) {
+    // Round coordinates to group nearby locations (4 decimal places = ~11 meters precision)
+    var roundedLat = Math.round(lat * 10000) / 10000;
+    var roundedLng = Math.round(lng * 10000) / 10000;
+    var locationKey = roundedLat + ',' + roundedLng;
+    
+    // Initialize location group if it doesn't exist
+    if (!locationGroups[locationKey]) {
+        locationGroups[locationKey] = {
+            lat: lat,
+            lng: lng,
+            applicants: []
+        };
+    }
+    
+    // Add applicant to this location group
+    locationGroups[locationKey].applicants.push(applicant);
+    
+    // Check if we already created a marker for this location
+    var existingMarker = null;
+    for (var i = 0; i < markers.length; i++) {
+        if (markers[i].locationKey === locationKey) {
+            existingMarker = markers[i];
+            break;
+        }
+    }
+    
+    // If marker doesn't exist, create it
+    if (!existingMarker) {
+        var applicantCount = locationGroups[locationKey].applicants.length;
+        
+        // Create custom icon with count badge
+        var iconHtml = createMarkerIconWithCount(applicantCount, applicant.is_highlighted);
+        var customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: iconHtml,
+            iconSize: [30, 41],
+            iconAnchor: [15, 41],
+            popupAnchor: [0, -41]
+        });
+        
+        var marker = L.marker([lat, lng], {icon: customIcon}).addTo(map);
+        marker.locationKey = locationKey;
+        
+        // Create popup content showing all applicants at this location
+        var popupContent = createPopupContent(locationGroups[locationKey].applicants);
+        marker.bindPopup(popupContent);
+        
+        // If this location has the highlighted applicant, open popup and center
+        var hasHighlighted = locationGroups[locationKey].applicants.some(function(app) {
+            return app.is_highlighted;
+        });
+        if (hasHighlighted) {
+            marker.openPopup();
+            map.setView([lat, lng], 15);
+        }
+        
+        markers.push(marker);
+        
+        // Update marker icon if count changes (shouldn't happen, but just in case)
+        marker.on('popupopen', function() {
+            var currentCount = locationGroups[locationKey].applicants.length;
+            if (currentCount > 1) {
+                var hasHighlight = locationGroups[locationKey].applicants.some(function(app) {
+                    return app.is_highlighted;
+                });
+                var newIconHtml = createMarkerIconWithCount(currentCount, hasHighlight);
+                marker.setIcon(L.divIcon({
+                    className: 'custom-marker',
+                    html: newIconHtml,
+                    iconSize: [30, 41],
+                    iconAnchor: [15, 41],
+                    popupAnchor: [0, -41]
+                }));
+            }
+        });
+    } else {
+        // Update existing marker's icon and popup with new count
+        var currentCount = locationGroups[locationKey].applicants.length;
+        var hasHighlight = locationGroups[locationKey].applicants.some(function(app) {
+            return app.is_highlighted;
+        });
+        var newIconHtml = createMarkerIconWithCount(currentCount, hasHighlight);
+        existingMarker.setIcon(L.divIcon({
+            className: 'custom-marker',
+            html: newIconHtml,
+            iconSize: [30, 41],
+            iconAnchor: [15, 41],
+            popupAnchor: [0, -41]
+        }));
+        var popupContent = createPopupContent(locationGroups[locationKey].applicants);
+        existingMarker.setPopupContent(popupContent);
+    }
+    
+    // Check if we should fit bounds after all markers are loaded
+    setTimeout(function() {
+        var highlightedApplicantId = '{{ applicant_id }}';
+        if (!highlightedApplicantId || highlightedApplicantId.trim() === '') {
+            if (markers.length > 0) {
+                var group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+    }, 1000); // Wait 1 second for all markers to load
+}
+
+function createMarkerIconWithCount(count, isHighlighted) {
+    var markerColor = isHighlighted ? 'red' : 'blue';
+    var markerUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-' + markerColor + '.png';
+    
+    var countBadge = '';
+    if (count > 1) {
+        countBadge = '<div style="position: absolute; top: -8px; right: -8px; background-color: #ff4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">' + count + '</div>';
+    }
+    
+    return '<div style="position: relative; width: 25px; height: 41px;">' +
+           '<img src="' + markerUrl + '" style="width: 25px; height: 41px;" />' +
+           countBadge +
+           '</div>';
+}
+
+function createPopupContent(applicants) {
+    var content = '<div style="max-width: 300px;">';
+    
+    if (applicants.length > 1) {
+        content += '<h6 style="margin-bottom: 10px;">' + applicants.length + ' Applicants at this Location</h6>';
+    }
+    
+    applicants.forEach(function(applicant, index) {
+        if (index > 0) {
+            content += '<hr style="margin: 10px 0;" />';
+        }
+        content += '<div>';
+        content += '<h6 style="margin-bottom: 5px;">' + applicant.name + '</h6>';
+        content += '<p style="margin: 2px 0;"><strong>Job:</strong> ' + applicant.job_title + '</p>';
+        content += '<p style="margin: 2px 0;"><strong>Company:</strong> ' + applicant.company + '</p>';
+        content += '<p style="margin: 2px 0;"><strong>Location:</strong> ' + applicant.location + '</p>';
+        content += '<p style="margin: 5px 0;"><span class="badge" style="background-color: ' + applicant.pipeline_stage_color + '; color: white;">' + applicant.pipeline_stage + '</span></p>';
+        content += '<p style="margin: 2px 0; font-size: 12px; color: #666;">Applied: ' + applicant.applied_at + '</p>';
+        content += '<div style="margin-top: 8px;">';
+        content += '<a href="' + applicant.profile_url + '" class="btn btn-sm btn-primary text-white" style="margin-right: 5px; text-decoration: none; padding: 4px 8px; font-size: 12px;">View Profile</a>';
+        content += '<a href="' + applicant.application_url + '" class="btn btn-sm btn-outline-secondary" style="text-decoration: none; padding: 4px 8px; font-size: 12px;">View Application</a>';
+        content += '</div>';
+        content += '</div>';
+    });
+    
+    content += '</div>';
+    return content;
+}
+
+function centerMap() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            map.setView([lat, lng], 13);
+            
+            L.marker([lat, lng])
+                .addTo(map)
+                .bindPopup('Your Location')
+                .openPopup();
+        });
+    } else {
+        alert('Geolocation not supported.');
+    }
+}
+
+function centerMapOnLocation(location, applicantId) {
+    var selectedApplicant = null;
+    if (applicantId) {
+        for (var i = 0; i < applicantData.length; i++) {
+            if (applicantData[i].id == applicantId) {
+                selectedApplicant = applicantData[i];
+                break;
+            }
+        }
+    }
+
+    var geocodeTarget;
+    var candidates = [];
+    
+    if (selectedApplicant) {
+        // Use candidates if available, otherwise fall back to geocode_query
+        candidates = selectedApplicant.geocode_candidates || [];
+        if (candidates.length === 0 && selectedApplicant.geocode_query) {
+            candidates = [selectedApplicant.geocode_query];
+        }
+        geocodeTarget = candidates.length > 0 ? candidates[0] : selectedApplicant.location;
+    } else {
+        geocodeTarget = location;
+        if (geocodeTarget && geocodeTarget.toLowerCase().indexOf('usa') === -1 && geocodeTarget.toLowerCase().indexOf('united states') === -1) {
+            candidates = [geocodeTarget, geocodeTarget + ', USA', geocodeTarget + ', United States'];
+        } else {
+            candidates = [geocodeTarget];
+        }
+    }
+    
+    if (!geocodeTarget) {
+        addApplicantMarkers();
+        return;
+    }
+
+    var popupLabel;
+    if (selectedApplicant) {
+        popupLabel = selectedApplicant.name + ': ' + selectedApplicant.location;
+    } else {
+        popupLabel = location;
+    }
+
+    // Try geocoding with candidates
+    attemptCenterGeocode(candidates, popupLabel, 0);
+}
+
+function attemptCenterGeocode(candidates, popupLabel, attemptIndex) {
+    if (!candidates || attemptIndex >= candidates.length) {
+        console.log('Location not found after trying all candidates');
+        // Still add applicant markers even if location not found
+        addApplicantMarkers();
+        return;
+    }
+
+    var query = candidates[attemptIndex];
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=1';
+
+    fetch(geocodingUrl)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                var lat = parseFloat(data[0].lat);
+                var lng = parseFloat(data[0].lon);
+                
+                // Center map on the found location
+                map.setView([lat, lng], 12);
+                
+                // Add a marker for the searched location
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(popupLabel)
+                    .openPopup();
+                
+                // Add applicant markers after centering
+                addApplicantMarkers();
+            } else {
+                // Try next candidate
+                attemptCenterGeocode(candidates, popupLabel, attemptIndex + 1);
+            }
+        })
+        .catch(function(error) {
+            console.log('Geocoding error: ' + error);
+            // Try next candidate even on error
+            attemptCenterGeocode(candidates, popupLabel, attemptIndex + 1);
+        });
+}
+
+function showApplicantOnMap(applicantId) {
+    // Find the applicant in the applicantData array
+    var targetApplicant = null;
+    
+    for (var i = 0; i < applicantData.length; i++) {
+        if (applicantData[i].id == applicantId) {
+            targetApplicant = applicantData[i];
+            break;
+        }
+    }
+    
+    if (targetApplicant) {
+        // Find the corresponding marker
+        for (var i = 0; i < markers.length; i++) {
+            if (markers[i].applicantId == applicantId) {
+                markers[i].openPopup();
+                map.setView(markers[i].getLatLng(), 15);
+                break;
+            }
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+});
+/* eslint-enable */
+</script>
+
+<style>
+.applicant-item:hover {
+    background-color: #f8f9fa;
+}
+
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+</style>
+{% endblock content %}
+

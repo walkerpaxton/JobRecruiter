@@ -40,8 +40,8 @@
                 <div class="card-body">
                     <h6>Personal Information</h6>
                     <p><strong>Name:</strong> {{ jobseeker_profile.full_name }}</p>
-                    {% if jobseeker_profile.location %}
-                        <p><strong>Location:</strong> {{ jobseeker_profile.location }}</p>
+                    {% if jobseeker_profile.has_location %}
+                        <p><strong>Location:</strong> {{ jobseeker_profile.get_location_display }}</p>
                     {% endif %}
                     {% if jobseeker_profile.phone %}
                         <p><strong>Phone:</strong> {{ jobseeker_profile.phone }}</p>

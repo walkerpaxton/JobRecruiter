@@ -2,7 +2,12 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">My Posted Jobs</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">My Posted Jobs</h2>
+        <a href="{% url 'jobpostings:applicant_map' %}" class="btn btn-info">
+            <i class="fas fa-map-marker-alt"></i> View Applicant Map
+        </a>
+    </div>
 
     {% if posted_jobs %}
         <p>Here are all the jobs you have posted. You can edit them or view their details.</p>

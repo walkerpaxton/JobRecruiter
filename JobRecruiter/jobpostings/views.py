@@ -358,6 +358,208 @@ def job_map_view(request):
     return render(request, 'jobpostings/job_map.html', context)
 
 @login_required
+def applicant_map_view(request):
+    """
+    Display an interactive map showing locations of applicants who applied to the employer's jobs.
+    Only shows applicants who have location sharing enabled and have a location set.
+    """
+    # Security Check 1: Ensure the user is an employer
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('home.index')
+    
+    # Get filter parameters
+    job_id = request.GET.get('job_id', '')
+    applicant_id = request.GET.get('applicant_id', '')
+    
+    # Get all jobs posted by this employer
+    employer_jobs = JobPosting.objects.filter(posted_by=request.user, is_active=True)
+    
+    # Filter by specific job if requested
+    if job_id:
+        try:
+            employer_jobs = employer_jobs.filter(id=int(job_id))
+        except ValueError:
+            pass
+    
+    # Get all applications for these jobs
+    applications = Application.objects.filter(job_posting__in=employer_jobs).select_related(
+        'applicant', 'applicant__profile', 'applicant__profile__jobseekerprofile', 'job_posting', 'pipeline_stage'
+    )
+    
+    # Filter to only applicants with location sharing enabled and location set
+    applicant_markers = []
+    highlighted_applicant = None
+    
+    for application in applications:
+        try:
+            # Check if applicant has a jobseeker profile
+            if not application.applicant.profile or application.applicant.profile.account_type != 'jobseeker':
+                continue
+            
+            try:
+                jobseeker_profile = application.applicant.profile.jobseekerprofile
+            except JobSeekerProfile.DoesNotExist:
+                continue
+            
+            # Check privacy setting and location availability
+            if not jobseeker_profile.show_location_to_recruiters:
+                continue
+            
+            # Check if applicant has any location information
+            if not jobseeker_profile.has_location():
+                continue
+            
+            # Get location display string
+            location_display = jobseeker_profile.get_location_display()
+            if not location_display:
+                continue
+            
+            # Check if this is the highlighted applicant
+            is_highlighted = applicant_id and str(application.applicant.id) == str(applicant_id)
+            if is_highlighted:
+                highlighted_applicant = application
+            
+            # Get applicant name
+            applicant_name = application.get_applicant_name()
+            
+            # Prepare multiple geocode query candidates for better address matching
+            # This handles various formats: full addresses, city/state, city only, etc.
+            geocode_candidates = []
+            
+            # Get cleaned field values
+            address = jobseeker_profile.address.strip() if jobseeker_profile.address and jobseeker_profile.address.strip() else None
+            city = jobseeker_profile.city.strip() if jobseeker_profile.city and jobseeker_profile.city.strip() else None
+            state = jobseeker_profile.state.strip() if jobseeker_profile.state and jobseeker_profile.state.strip() else None
+            
+            # Get state variations (abbreviation and full name)
+            state_variations = []
+            if state:
+                state_variations.append(state)
+                state_full = get_state_full_name(state)
+                if state_full and state_full != state:
+                    state_variations.append(state_full)
+            # Ensure we always have at least one state variation if state exists
+            if state and len(state_variations) == 0:
+                state_variations.append(state)
+            
+            # Build candidates in order of specificity (most specific first)
+            # Always include fallbacks to less specific options in case detailed addresses fail
+            
+            # 1. Full address with city and state (most specific)
+            if address and city and state:
+                # Try different address formats - Nominatim can be picky about format
+                for state_var in state_variations:
+                    # Format 1: Standard "address, city, state"
+                    full_address = f"{address}, {city}, {state_var}"
+                    geocode_candidates.append(full_address)
+                    geocode_candidates.append(f"{full_address}, USA")
+                    
+                    # Format 2: Try reversed order "city, state, address" (sometimes works better)
+                    reversed_address = f"{city}, {state_var}, {address}"
+                    geocode_candidates.append(reversed_address)
+                    geocode_candidates.append(f"{reversed_address}, USA")
+                
+                # Fallback: city and state if full address fails (try all state variations)
+                for state_var in state_variations:
+                    city_state = f"{city}, {state_var}"
+                    geocode_candidates.append(city_state)
+                    geocode_candidates.append(f"{city_state}, USA")
+                    geocode_candidates.append(f"{city_state}, United States")
+            
+            # 2. Address with city only
+            elif address and city and not state:
+                geocode_candidates.append(f"{address}, {city}")
+                geocode_candidates.append(f"{address}, {city}, USA")
+                # Fallback: city only
+                geocode_candidates.append(city)
+                geocode_candidates.append(f"{city}, USA")
+            
+            # 3. Address with state only
+            elif address and state and not city:
+                for state_var in state_variations:
+                    geocode_candidates.append(f"{address}, {state_var}")
+                    geocode_candidates.append(f"{address}, {state_var}, USA")
+                # Fallback: state only (try all variations)
+                for state_var in state_variations:
+                    geocode_candidates.append(state_var)
+                    geocode_candidates.append(f"{state_var}, USA")
+            
+            # 4. Address only
+            elif address and not city and not state:
+                geocode_candidates.append(address)
+                geocode_candidates.append(f"{address}, USA")
+            
+            # 5. City and state (no address)
+            elif city and state and not address:
+                for state_var in state_variations:
+                    city_state = f"{city}, {state_var}"
+                    geocode_candidates.append(city_state)
+                    geocode_candidates.append(f"{city_state}, USA")
+                    geocode_candidates.append(f"{city_state}, United States")
+            
+            # 6. City only
+            elif city and not state and not address:
+                geocode_candidates.append(city)
+                geocode_candidates.append(f"{city}, USA")
+            
+            # 7. State only (least specific, but still try)
+            elif state and not city and not address:
+                for state_var in state_variations:
+                    geocode_candidates.append(state_var)
+                    geocode_candidates.append(f"{state_var}, USA")
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_candidates = []
+            for candidate in geocode_candidates:
+                if candidate and candidate.strip() and candidate not in seen:
+                    seen.add(candidate)
+                    unique_candidates.append(candidate.strip())
+            
+            # Get pipeline stage info
+            pipeline_stage_name = application.pipeline_stage.name if application.pipeline_stage else 'Unassigned'
+            pipeline_stage_color = application.pipeline_stage.color if application.pipeline_stage else '#6B7280'
+            
+            applicant_markers.append({
+                'id': application.applicant.id,
+                'application_id': application.id,
+                'name': applicant_name,
+                'email': application.get_applicant_email(),
+                'location': location_display,
+                'geocode_candidates': unique_candidates,
+                'geocode_query': unique_candidates[0] if unique_candidates else location_display,  # Keep for backward compatibility
+                'job_title': application.job_posting.title,
+                'company': application.job_posting.company_name,
+                'applied_at': application.applied_at.strftime('%Y-%m-%d'),
+                'pipeline_stage': pipeline_stage_name,
+                'pipeline_stage_color': pipeline_stage_color,
+                'profile_url': reverse('accounts.public_profile', args=[application.applicant.id]),
+                'application_url': reverse('jobpostings:view_applicants', args=[application.job_posting.id]),
+                'is_highlighted': is_highlighted,
+            })
+        except (AttributeError, JobSeekerProfile.DoesNotExist):
+            continue
+    
+    # Get all jobs for the filter dropdown
+    all_employer_jobs = JobPosting.objects.filter(posted_by=request.user, is_active=True).order_by('-created_at')
+    
+    # Debug: Count total applications
+    total_applications = Application.objects.filter(job_posting__in=employer_jobs).count()
+    
+    context = {
+        'applicant_markers': applicant_markers,
+        'employer_jobs': all_employer_jobs,
+        'selected_job_id': job_id,
+        'applicant_id': applicant_id,
+        'highlighted_applicant': highlighted_applicant,
+        'total_applications': total_applications,
+        'applicants_with_locations': len(applicant_markers),
+    }
+    
+    return render(request, 'jobpostings/applicant_map.html', context)
+
+@login_required
 def view_applicants(request, job_id):
     # 1. Get the job post, ensuring it exists
     job = get_object_or_404(JobPosting, id=job_id)
@@ -561,7 +763,7 @@ def application_detail_modal(request, application_id):
                     'color': application.pipeline_stage.color if application.pipeline_stage else '#6B7280',
                 } if application.pipeline_stage else None,
                 'jobseeker_profile': {
-                    'location': jobseeker_profile.location if jobseeker_profile else '',
+                    'location': jobseeker_profile.get_location_display() if jobseeker_profile else '',
                     'phone': jobseeker_profile.phone if jobseeker_profile else '',
                     'linkedin': jobseeker_profile.linkedin if jobseeker_profile else '',
                     'summary': jobseeker_profile.summary if jobseeker_profile else '',
