@@ -1,3 +1,5 @@
+from django.db.models import Q
+from .forms import CandidateSearchForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -6,7 +8,7 @@ from django.contrib.auth.models import User
 
 # --- Import our new forms and models ---
 from .forms import CustomUserCreationForm, CustomErrorList, JobSeekerProfileForm, EmployerProfileForm, UserEmailForm
-from .models import Profile, JobSeekerProfile, EmployerProfile
+from .models import Profile, JobSeekerProfile, EmployerProfile, SavedSearch
 
 # --- User Authentication Views ---
 
@@ -275,3 +277,105 @@ def public_profile_view(request, user_id):
     except Profile.DoesNotExist:
         messages.error(request, "This user does not have a base profile.")
         return redirect(request.META.get('HTTP_REFERER', 'jobpostings:my_posted_jobs'))
+    
+
+@login_required
+def search_candidates_view(request):
+    """
+    Allows employers to search for candidates based on location and keywords
+    (skills, summary, etc).
+    """
+    # Security Check: Only Employers allowed
+    if not hasattr(request.user, 'profile') or request.user.profile.account_type != 'employer':
+        messages.error(request, "Only employers can search for candidates.")
+        return redirect('home.index')
+
+    form = CandidateSearchForm(request.GET or None)
+    results = []
+
+    # We try/except to handle cases where the profile might be incomplete, though unlikely
+    try:
+        employer_profile = request.user.profile.employerprofile
+        saved_searches = SavedSearch.objects.filter(recruiter=employer_profile).order_by('-created_at')
+    except:
+        saved_searches = []
+
+    # Only run query if the form has data (user clicked Search)
+    if request.GET and form.is_valid():
+        location_query = form.cleaned_data.get('location')
+        keywords_query = form.cleaned_data.get('keywords')
+
+        if form.cleaned_data.get('save_search'):
+            search_name = form.cleaned_data.get('search_name') or "Untitled Search"
+            
+            # Create the saved search record
+            SavedSearch.objects.create(
+                recruiter=request.user.profile.employerprofile,
+                name=search_name,
+                location=location_query,
+                keywords=keywords_query
+            )
+            messages.success(request, f"Search '{search_name}' has been saved!")
+
+        # Start with all job seekers
+        candidates = JobSeekerProfile.objects.all()
+
+        if location_query:
+            candidates = candidates.filter(location__icontains=location_query)
+
+        if keywords_query:
+            # Search in technical skills, soft skills, and summary
+            candidates = candidates.filter(
+                Q(technical_skills__icontains=keywords_query) | 
+                Q(soft_skills__icontains=keywords_query) |
+                Q(summary__icontains=keywords_query)
+            ).distinct()
+
+        results = candidates
+
+    return render(request, 'accounts/candidate_search.html', {
+        'form': form,
+        'results': results,
+        'saved_searches': saved_searches,
+        'title': 'Search Candidates'
+    })
+
+@login_required
+def delete_saved_search_view(request, pk):
+    """
+    Deletes a specific saved search.
+    """
+    # Security: Ensure the saved search exists AND belongs to the current logged-in employer
+    saved_search = get_object_or_404(SavedSearch, pk=pk, recruiter__profile__user=request.user)
+    
+    saved_search.delete()
+    messages.success(request, "Saved search deleted successfully.")
+    return redirect('search_candidates')
+
+@login_required
+def edit_saved_search_view(request, pk):
+    """
+    Allows editing the Name, Location, and Keywords of a saved search.
+    """
+    # Security: Ensure ownership
+    saved_search = get_object_or_404(SavedSearch, pk=pk, recruiter__profile__user=request.user)
+    
+    if request.method == 'POST':
+        # Manually process the update to keep it simple without a ModelForm
+        new_name = request.POST.get('search_name')
+        new_location = request.POST.get('location')
+        new_keywords = request.POST.get('keywords')
+        
+        if new_name:
+            saved_search.name = new_name
+            saved_search.location = new_location
+            saved_search.keywords = new_keywords
+            saved_search.save()
+            messages.success(request, "Saved search updated successfully.")
+            return redirect('search_candidates')
+        else:
+            messages.error(request, "Search name is required.")
+
+    return render(request, 'accounts/edit_saved_search.html', {
+        'saved_search': saved_search
+    })

@@ -11,4 +11,7 @@ urlpatterns = [
     path('profile/create/jobseeker/', views.create_jobseeker_profile_view, name='accounts.create_jobseeker_profile'),
     path('profile/create/employer/', views.create_employer_profile_view, name='accounts.create_employer_profile'),
     path('jobseeker/<int:user_id>/', views.public_profile_view, name='accounts.public_profile'),
+    path('search/', views.search_candidates_view, name='search_candidates'),
+    path('search/delete/<int:pk>/', views.delete_saved_search_view, name='delete_saved_search'),
+    path('search/edit/<int:pk>/', views.edit_saved_search_view, name='edit_saved_search'),
 ]

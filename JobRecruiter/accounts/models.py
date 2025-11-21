@@ -100,4 +100,19 @@ class EmployerProfile(models.Model):
     def __str__(self):
         return f"Employer Profile for {self.company_name}"
 
+
+class SavedSearch(models.Model):
+    """
+    Stores search criteria for an employer so they can be notified of new matches.
+    """
+    recruiter = models.ForeignKey(EmployerProfile, on_delete=models.CASCADE, related_name='saved_searches')
+    name = models.CharField(max_length=100, default="My Saved Search")
+    location = models.CharField(max_length=100, blank=True)
+    keywords = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_notified = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} for {self.recruiter.company_name}"
+
     

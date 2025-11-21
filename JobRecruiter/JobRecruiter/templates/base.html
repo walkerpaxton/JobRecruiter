@@ -36,6 +36,9 @@
                 <li class="nav-item">
                   <a class="nav-link" href="{% url 'jobpostings:my_posted_jobs' %}">My Posted Jobs</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'search_candidates' %}">Search Candidates</a>
+                </li>
                 {% endif %}
                 {% if user.is_authenticated %}
                 <li class="nav-item">

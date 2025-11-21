@@ -26,7 +26,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong>{{ message.sender.username }}</strong>
-                                            <div class="mt-1">{{ message.content }}</div>
+                                            <div class="mt-1">{{ message.content|urlize|linebreaksbr }}</div>
                                         </div>
                                         <small class="{% if message.sender == request.user %}text-white-50{% else %}text-muted{% endif %} ms-2">
                                             {{ message.timestamp|date:"M d, H:i" }}

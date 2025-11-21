@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h2>Search Candidates</h2>
+        </div>
+
+        <div class="col-md-4 col-lg-3">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 h6"><i class="fas fa-filter me-2"></i>Filters</h5>
+                </div>
+                <div class="card-body">
+                    
+                    {% if saved_searches %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-primary">Your Saved Searches</label>
+                            <ul class="list-group list-group-flush border rounded">
+                                {% for search in saved_searches %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        
+                                        <a href="?location={{ search.location }}&keywords={{ search.keywords }}" 
+                                           class="text-decoration-none text-dark text-truncate" 
+                                           style="max-width: 65%;"
+                                           title="Run this search">
+                                            {{ search.name }}
+                                        </a>
+
+                                        <div class="flex-shrink-0">
+                                            <a href="{% url 'edit_saved_search' search.pk %}" 
+                                               class="text-secondary me-2" 
+                                               title="Edit Search">
+                                                <i class="fas fa-pencil-alt small"></i>
+                                            </a>
+                                            
+                                            <a href="{% url 'delete_saved_search' search.pk %}" 
+                                               class="text-danger" 
+                                               title="Delete Search"
+                                               onclick="return confirm('Are you sure you want to delete this saved search?');">
+                                                <i class="fas fa-trash-alt small"></i>
+                                            </a>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <hr>
+                    {% endif %}
+                    <form method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Location</label>
+                            {{ form.location }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Keywords</label>
+                            {{ form.keywords }}
+                            <div class="form-text text-muted small">{{ form.keywords.help_text }}</div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3 form-check">
+                            {{ form.save_search }}
+                            <label class="form-check-label" for="{{ form.save_search.id_for_label }}">
+                                Save this search?
+                            </label>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Search Name</label>
+                            {{ form.search_name }}
+                            <div class="form-text text-muted small">Give it a name (e.g. "Python Devs")</div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">Search</button>
+                            <a href="{% url 'search_candidates' %}" class="btn btn-outline-secondary btn-sm">Clear Filters</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 col-lg-9">
+            {% if results %}
+                <p class="text-muted mb-3">Found {{ results.count }} candidate(s)</p>
+                
+                {% for candidate in results %}
+                <div class="card shadow-sm mb-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            
+                            <div class="me-3">
+                                {% if candidate.profile_picture and candidate.show_profile_picture_to_recruiters %}
+                                    <img src="{{ candidate.profile_picture.url }}" class="rounded-circle" style="width: 70px; height: 70px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white" style="width: 70px; height: 70px;">
+                                        <i class="fas fa-user fa-2x"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">
+                                    {% if candidate.show_full_name_to_recruiters %}
+                                        {{ candidate.full_name }}
+                                    {% else %}
+                                        Private Candidate
+                                    {% endif %}
+                                </h5>
+                                <p class="text-muted mb-1 small">{{ candidate.current_job|default:"Job Seeker" }}</p>
+                                
+                                {% if candidate.location and candidate.show_location_to_recruiters %}
+                                    <p class="mb-1 small text-secondary"><i class="fas fa-map-marker-alt me-1"></i> {{ candidate.location }}</p>
+                                {% endif %}
+
+                                {% if candidate.technical_skills and candidate.show_technical_skills_to_recruiters %}
+                                    <div class="mt-1">
+                                        <span class="badge bg-light text-dark border">Skills:</span>
+                                        <span class="small text-muted">{{ candidate.technical_skills|truncatechars:50 }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="ms-3">
+                                <a href="{% url 'accounts.public_profile' candidate.profile.user.id %}" class="btn btn-outline-primary">View Profile</a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-light text-center p-5 border" role="alert">
+                    <div class="mb-3"><i class="fas fa-search fa-3x text-muted"></i></div>
+                    <h5>Ready to search?</h5>
+                    <p>Enter a location or skill on the left (or pick a Saved Search) to find talent.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

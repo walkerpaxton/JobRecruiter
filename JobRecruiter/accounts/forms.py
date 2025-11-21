@@ -103,3 +103,25 @@ class EmployerProfileForm(forms.ModelForm):
             'company_size': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 50-200 employees'}),
             'company_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
+class CandidateSearchForm(forms.Form):
+    location = forms.CharField(
+    required=False, 
+    label='Location',
+    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City, State, or Zip'})
+    )
+    keywords = forms.CharField(
+    required=False, 
+    label='Keywords',
+    help_text='Search skills, summary, or bio.',
+    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Python, Project Manager, SQL'})
+    )
+    save_search = forms.BooleanField(
+        required=False, 
+        label="Save this search for later?",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    search_name = forms.CharField(
+        required=False, 
+        label="Name this search",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Python Devs in Atlanta'})
+    )
