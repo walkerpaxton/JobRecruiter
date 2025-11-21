@@ -55,8 +55,8 @@
                             {% endif %}
                             
                             {% if not is_public_view or profile.show_location_to_recruiters %}
-                                {% if profile.location %}
-                                    <p class="mb-2"><i class="fas fa-map-marker-alt text-primary"></i> {{ profile.location }}</p>
+                                {% if profile.has_location %}
+                                    <p class="mb-2"><i class="fas fa-map-marker-alt text-primary"></i> {{ profile.get_location_display }}</p>
                                 {% endif %}
                             {% endif %}
                             

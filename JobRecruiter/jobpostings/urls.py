@@ -13,6 +13,7 @@ urlpatterns = [
     path('<int:job_id>/pipeline/', views.pipeline_view, name='pipeline'),
 	path('<int:job_id>/apply/', views.apply_to_job_view, name='apply'),
 	path('map/', views.job_map_view, name='map'),
+    path('applicant-map/', views.applicant_map_view, name='applicant_map'),
     path('my-applications/', views.job_seeker_applications, name='job_seeker_applications'),
     path('my-posted-jobs/', views.my_posted_jobs, name='my_posted_jobs'),
     path('application/<int:app_id>/move/', views.move_application_stage, name='move_application_stage'),

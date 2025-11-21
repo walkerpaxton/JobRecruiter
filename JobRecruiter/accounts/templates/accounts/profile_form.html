@@ -58,11 +58,23 @@
                             
                             
                             <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Address (optional)</label>{{ form.address }}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Location *</label>{{ form.location }}
+                                    <label class="form-label">City (optional)</label>{{ form.city }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">State (optional)</label>{{ form.state }}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
                                     <div class="form-check form-switch mt-2">
                                         {{ form.show_location_to_recruiters }}
-                                        <label class="form-check-label" for="{{ form.show_location_to_recruiters.id_for_label }}">Show Location</label>
+                                        <label class="form-check-label" for="{{ form.show_location_to_recruiters.id_for_label }}">Show Location to Recruiters</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

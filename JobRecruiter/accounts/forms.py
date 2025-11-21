@@ -58,7 +58,9 @@ class JobSeekerProfileForm(forms.ModelForm):
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control'}),
             'preferred_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City, State/Country'}),
+            'address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address (optional)'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City (optional)'}),
+            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State (optional)'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'linkedin': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://linkedin.com/in/yourprofile'}),
             'profile_picture': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),

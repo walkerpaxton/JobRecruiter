@@ -32,7 +32,9 @@ class JobSeekerProfile(models.Model):
     # Personal Information
     full_name = models.CharField(max_length=100)
     preferred_name = models.CharField(max_length=100, blank=True)
-    location = models.CharField(max_length=100, blank=True)
+    address = models.CharField(max_length=200, blank=True, help_text="Street address")
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=50, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     linkedin = models.URLField(blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/jobseekers/', blank=True, null=True)
@@ -76,6 +78,35 @@ class JobSeekerProfile(models.Model):
 
     show_portfolio_to_recruiters = models.BooleanField(default=True)
     show_salary_expectation_to_recruiters = models.BooleanField(default=True)
+    
+    def get_location_display(self):
+        """Combine address, city, and state into a display string"""
+        parts = []
+        if self.address:
+            parts.append(self.address)
+        if self.city:
+            parts.append(self.city)
+        if self.state:
+            parts.append(self.state)
+        return ", ".join(parts) if parts else ""
+    
+    def get_location_for_geocoding(self):
+        """Get location string optimized for geocoding"""
+        parts = []
+        if self.address:
+            parts.append(self.address)
+        if self.city:
+            parts.append(self.city)
+        if self.state:
+            parts.append(self.state)
+        location = ", ".join(parts)
+        if location and 'USA' not in location.upper() and 'United States' not in location.upper():
+            location = f"{location}, USA"
+        return location
+    
+    def has_location(self):
+        """Check if any location field is filled"""
+        return bool(self.address or self.city or self.state)
     
     def __str__(self):
         return f"Job Seeker Profile for {self.profile.user.username}"
