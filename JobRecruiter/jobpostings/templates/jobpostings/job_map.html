@@ -58,12 +58,15 @@
                 </div>
                 <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                     {% for job in jobs %}
-                    <div class="job-item mb-2 p-2 border rounded">
+                    <div class="job-item mb-2 p-2 border rounded" data-job-id="{{ job.id }}">
                         <h6 class="mb-1">{{ job.title }}</h6>
                         <p class="mb-1 text-muted">{{ job.company_name }}</p>
                         <p class="mb-1 text-muted">{{ job.location_display }}</p>
                         <p class="mb-1 text-muted">{{ job.address }}</p>
                         <p class="mb-1"><strong>{{ job.pay_range_display }}</strong></p>
+                        <div class="job-distance-info mb-1" style="display: none;">
+                            <span class="badge bg-info distance-badge"></span>
+                        </div>
                         <div class="d-flex gap-1">
                             <a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-sm btn-outline-primary">
                                 View
@@ -88,8 +91,43 @@
                 <div class="card-header">
                     <h5><i class="fas fa-map"></i> Job Locations</h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0" style="position: relative;">
                     <div id="map" style="height: 600px; width: 100%;"></div>
+                    <!-- Floating Filter Panel on Map -->
+                    <div id="map-filter-panel" class="map-filter-panel">
+                        <div class="card shadow">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-filter"></i> Filter by Distance</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="filter-address" class="form-label small">Your Location</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="filter-address" 
+                                               placeholder="Enter address or use current location">
+                                        <button class="btn btn-outline-secondary" type="button" id="use-current-location" 
+                                                title="Use current location">
+                                            <i class="fas fa-crosshairs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="max-distance" class="form-label small">Max Distance (miles)</label>
+                                    <input type="number" class="form-control form-control-sm" id="max-distance" 
+                                           placeholder="e.g., 25" min="0" step="1">
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary btn-sm" id="apply-filters">
+                                        <i class="fas fa-search"></i> Apply Filter
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="clear-filters">
+                                        <i class="fas fa-times"></i> Clear
+                                    </button>
+                                </div>
+                                <div id="filter-status" class="mt-2 small text-muted" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,6 +146,9 @@
 var map;
 var markers = [];
 var jobData = JSON.parse(document.getElementById('job-markers-data').textContent);
+var userLocationMarker = null;
+var userLocation = null; // {lat, lng, address}
+var jobDistances = {}; // {jobId: distance_in_miles}
 
 function initMap() {
     map = L.map('map').setView([40.7128, -74.0060], 10);
@@ -213,14 +254,23 @@ function createJobMarker(job, lat, lng) {
         '<h6>' + job.title + '</h6>' +
         '<p><strong>' + job.company + '</strong></p>' +
         '<p>' + popupLocation + '</p>' +
-        '<p>' + job.pay_range + '</p>' +
-        '<a href="' + job.url + '" class="btn btn-sm btn-primary text-white">View Job</a>' +
+        '<p>' + job.pay_range + '</p>';
+    
+    // Add distance info if available
+    if (jobDistances[job.id] !== undefined) {
+        popupContent += '<p><small><i class="fas fa-ruler"></i> Distance: ' + 
+                       jobDistances[job.id].toFixed(1) + ' miles</small></p>';
+    }
+    
+    popupContent += '<a href="' + job.url + '" class="btn btn-sm btn-primary text-white">View Job</a>' +
         '</div>';
     
     marker.bindPopup(popupContent);
     
-    // Store job ID for showJobOnMap function
+    // Store job ID and coordinates
     marker.jobId = job.id;
+    marker.jobLat = lat;
+    marker.jobLng = lng;
     
     // If this is the highlighted job, open its popup and center on it
     if (job.is_highlighted) {
@@ -247,15 +297,46 @@ function centerMap() {
         navigator.geolocation.getCurrentPosition(function(position) {
             var lat = position.coords.latitude;
             var lng = position.coords.longitude;
+            setUserLocation(lat, lng, 'Current Location');
             map.setView([lat, lng], 13);
-            
-            L.marker([lat, lng])
-                .addTo(map)
-                .bindPopup('Your Location')
-                .openPopup();
+        }, function(error) {
+            alert('Unable to get your location: ' + error.message);
         });
     } else {
         alert('Geolocation not supported.');
+    }
+}
+
+function setUserLocation(lat, lng, address) {
+    userLocation = {lat: lat, lng: lng, address: address || 'Current Location'};
+    
+    // Remove existing user location marker
+    if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+    }
+    
+    // Add new user location marker
+    var userIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    
+    userLocationMarker = L.marker([lat, lng], {icon: userIcon})
+        .addTo(map)
+        .bindPopup('<strong>Your Location</strong><br>' + address)
+        .openPopup();
+    
+    // Update address input
+    document.getElementById('filter-address').value = address;
+    
+    // If filters are set, recalculate
+    var maxDist = document.getElementById('max-distance').value;
+    if (maxDist) {
+        applyFilters();
     }
 }
 
@@ -346,8 +427,238 @@ function showJobOnMap(jobId) {
     }
 }
 
+// Haversine formula to calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    var R = 3959; // Earth radius in miles
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function geocodeAddress(address, callback) {
+    var geocodingUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + 
+                      encodeURIComponent(address) + '&limit=1';
+    
+    fetch(geocodingUrl)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                var lat = parseFloat(data[0].lat);
+                var lng = parseFloat(data[0].lon);
+                callback(lat, lng, null);
+            } else {
+                callback(null, null, 'Address not found');
+            }
+        })
+        .catch(function(error) {
+            callback(null, null, 'Geocoding error: ' + error);
+        });
+}
+
+function calculateDistances() {
+    if (!userLocation) return;
+    
+    jobDistances = {};
+    
+    for (var i = 0; i < markers.length; i++) {
+        var marker = markers[i];
+        var distance = calculateDistance(
+            userLocation.lat, 
+            userLocation.lng, 
+            marker.jobLat, 
+            marker.jobLng
+        );
+        jobDistances[marker.jobId] = distance;
+    }
+}
+
+
+function applyFilters() {
+    var maxDistance = parseFloat(document.getElementById('max-distance').value) || null;
+    
+    if (!maxDistance) {
+        // No filters, show all
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setOpacity(1);
+            var jobItem = document.querySelector('.job-item[data-job-id="' + markers[i].jobId + '"]');
+            if (jobItem) {
+                jobItem.style.opacity = '1';
+                jobItem.style.display = '';
+            }
+        }
+        updateFilterStatus('');
+        return;
+    }
+    
+    // Calculate distances if needed
+    if (maxDistance && userLocation && Object.keys(jobDistances).length === 0) {
+        calculateDistances();
+    }
+    
+    var visibleCount = 0;
+    
+    for (var i = 0; i < markers.length; i++) {
+        var marker = markers[i];
+        var jobItem = document.querySelector('.job-item[data-job-id="' + marker.jobId + '"]');
+        var shouldShow = true;
+        
+        // Check distance filter
+        if (maxDistance && jobDistances[marker.jobId] !== undefined) {
+            if (jobDistances[marker.jobId] > maxDistance) {
+                shouldShow = false;
+            }
+        }
+        
+        // Apply visibility
+        if (shouldShow) {
+            marker.setOpacity(1);
+            if (jobItem) {
+                jobItem.style.opacity = '1';
+                jobItem.style.display = '';
+                
+                // Update distance badge
+                var distanceInfo = jobItem.querySelector('.job-distance-info');
+                if (distanceInfo) {
+                    var distanceBadge = distanceInfo.querySelector('.distance-badge');
+                    
+                    if (jobDistances[marker.jobId] !== undefined && distanceBadge) {
+                        distanceBadge.textContent = jobDistances[marker.jobId].toFixed(1) + ' mi';
+                        distanceInfo.style.display = 'block';
+                    }
+                }
+            }
+            visibleCount++;
+        } else {
+            marker.setOpacity(0.3);
+            if (jobItem) {
+                jobItem.style.opacity = '0.3';
+            }
+        }
+    }
+    
+    updateFilterStatus('Showing ' + visibleCount + ' of ' + markers.length + ' jobs');
+    
+    // Update popups with distance info
+    updateMarkerPopups();
+}
+
+function updateMarkerPopups() {
+    for (var i = 0; i < markers.length; i++) {
+        var marker = markers[i];
+        var job = jobData.find(function(j) { return j.id == marker.jobId; });
+        if (!job) continue;
+        
+        var popupLocation = job.display_location || job.location;
+        var popupContent = '<div>' +
+            '<h6>' + job.title + '</h6>' +
+            '<p><strong>' + job.company + '</strong></p>' +
+            '<p>' + popupLocation + '</p>' +
+            '<p>' + job.pay_range + '</p>';
+        
+        if (jobDistances[marker.jobId] !== undefined) {
+            popupContent += '<p><small><i class="fas fa-ruler"></i> Distance: ' + 
+                           jobDistances[marker.jobId].toFixed(1) + ' miles</small></p>';
+        }
+        
+        popupContent += '<a href="' + job.url + '" class="btn btn-sm btn-primary text-white">View Job</a>' +
+            '</div>';
+        
+        marker.setPopupContent(popupContent);
+    }
+}
+
+function updateFilterStatus(message) {
+    var statusEl = document.getElementById('filter-status');
+    if (message) {
+        statusEl.textContent = message;
+        statusEl.style.display = 'block';
+    } else {
+        statusEl.style.display = 'none';
+    }
+}
+
+function clearFilters() {
+    document.getElementById('filter-address').value = '';
+    document.getElementById('max-distance').value = '';
+    
+    if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+        userLocationMarker = null;
+    }
+    userLocation = null;
+    jobDistances = {};
+    
+    // Show all markers
+    for (var i = 0; i < markers.length; i++) {
+        markers[i].setOpacity(1);
+        var jobItem = document.querySelector('.job-item[data-job-id="' + markers[i].jobId + '"]');
+        if (jobItem) {
+            jobItem.style.opacity = '1';
+            jobItem.style.display = '';
+            
+            // Hide distance badge
+            var distanceInfo = jobItem.querySelector('.job-distance-info');
+            if (distanceInfo) {
+                distanceInfo.style.display = 'none';
+            }
+        }
+    }
+    
+    updateMarkerPopups();
+    updateFilterStatus('');
+}
+
+// Event listeners
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
+    
+    // Use current location button
+    document.getElementById('use-current-location').addEventListener('click', function() {
+        centerMap();
+    });
+    
+    // Apply filters button
+    document.getElementById('apply-filters').addEventListener('click', function() {
+        var address = document.getElementById('filter-address').value.trim();
+        var maxDist = document.getElementById('max-distance').value;
+        
+        if (!address && maxDist) {
+            alert('Please enter an address or use your current location first.');
+            return;
+        }
+        
+        if (address && address !== (userLocation ? userLocation.address : '')) {
+            // Geocode the new address
+            geocodeAddress(address, function(lat, lng, error) {
+                if (error) {
+                    alert(error);
+                } else if (lat && lng) {
+                    setUserLocation(lat, lng, address);
+                    applyFilters();
+                }
+            });
+        } else if (userLocation) {
+            applyFilters();
+        }
+    });
+    
+    // Clear filters button
+    document.getElementById('clear-filters').addEventListener('click', function() {
+        clearFilters();
+    });
+    
+    // Allow Enter key in address input
+    document.getElementById('filter-address').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('apply-filters').click();
+        }
+    });
 });
 /* eslint-enable */
 </script>
@@ -355,6 +666,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 .job-item:hover {
     background-color: #f8f9fa;
+}
+
+.map-filter-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    width: 300px;
+    max-width: calc(100% - 20px);
+}
+
+.map-filter-panel .card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.map-filter-panel .card-header {
+    padding: 0.5rem 1rem;
+}
+
+.map-filter-panel .card-body {
+    padding: 1rem;
+}
+
+@media (max-width: 768px) {
+    .map-filter-panel {
+        width: calc(100% - 20px);
+        right: 10px;
+        left: 10px;
+    }
 }
 </style>
 {% endblock content %}
