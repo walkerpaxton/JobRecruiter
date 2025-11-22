@@ -19,8 +19,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from .admin_export import export_all_data_view
 
 urlpatterns = [
+    path("admin/export-all-data/", export_all_data_view, name='admin_export_all_data'),
     path("admin/", admin.site.urls),
     path('', include('home.urls')),
     path("accounts/", include("accounts.urls")),

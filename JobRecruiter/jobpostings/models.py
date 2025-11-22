@@ -24,6 +24,7 @@ class JobPosting(models.Model):
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
     description = models.TextField()
     benefits = models.TextField(blank=True)
+    required_skills = models.TextField(blank=True, help_text="List of skills required for this role (comma, semicolon, or newline separated)")
     application_url = models.URLField(blank=True)
     application_email = models.EmailField(blank=True)
 

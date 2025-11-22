@@ -92,6 +92,23 @@ def my_posted_jobs(request):
     # 3. Render the new template we are about to create
     return render(request, 'jobpostings/my_posted_jobs.html', context)
 
+def extract_skills(text):
+    """Extract skills from text, returning a set of normalized skill strings."""
+    if not text:
+        return set()
+    import re
+    delimiters = r'[,;\n|/]'
+    skills = re.split(delimiters, text.lower())
+    normalized_skills = set()
+    for skill in skills:
+        skill = skill.strip()
+        skill = re.sub(r'^(skills?|proficient in|experience with|knowledge of|familiar with):?\s*', '', skill, flags=re.IGNORECASE)
+        skill = skill.strip('.,;()[]{}')
+        if skill and len(skill) > 1:
+            normalized_skills.add(skill)
+    return normalized_skills
+
+
 def job_list_view(request):
     jobs = JobPosting.objects.filter(is_active=True)
     search_query = request.GET.get('search', '')
@@ -117,8 +134,39 @@ def job_list_view(request):
     if employment_type_filter:
         jobs = jobs.filter(employment_type=employment_type_filter)
     
+    # Get recommended jobs for job seekers
+    recommended_jobs = []
+    if request.user.is_authenticated and hasattr(request, 'profile') and request.profile and request.profile.account_type == 'jobseeker':
+        try:
+            jobseeker_profile = request.profile.jobseekerprofile
+            user_skills_text = f"{jobseeker_profile.technical_skills or ''} {jobseeker_profile.soft_skills or ''}"
+            user_skills = extract_skills(user_skills_text)
+            
+            if user_skills:
+                # Get jobs user hasn't applied to
+                applied_job_ids = Application.objects.filter(applicant=request.user).values_list('job_posting_id', flat=True)
+                available_jobs = JobPosting.objects.filter(is_active=True).exclude(id__in=applied_job_ids)
+                
+                # Check each job for skill matches
+                for job in available_jobs:
+                    if job.required_skills:
+                        job_skills = extract_skills(job.required_skills)
+                        matching_skills = user_skills.intersection(job_skills)
+                        if matching_skills:  # At least one match
+                            recommended_jobs.append({
+                                'job': job,
+                                'matching_skills': sorted(matching_skills),
+                                'match_count': len(matching_skills)
+                            })
+                
+                # Sort by number of matching skills (most matches first)
+                recommended_jobs.sort(key=lambda x: x['match_count'], reverse=True)
+        except:
+            pass
+    
     context = {
         'jobs': jobs,
+        'recommended_jobs': recommended_jobs,
         'search_query': search_query,
         'location_filter': location_filter,
         'employment_type_filter': employment_type_filter,

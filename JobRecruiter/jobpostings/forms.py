@@ -17,6 +17,7 @@ class JobPostingForm(forms.ModelForm):
             "employment_type",
             "description",
             "benefits",
+            "required_skills",
             "application_url",
             "application_email",
         ]
@@ -24,6 +25,7 @@ class JobPostingForm(forms.ModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 6}),
             "benefits": forms.Textarea(attrs={"rows": 4}),
+            "required_skills": forms.Textarea(attrs={"rows": 3, "placeholder": "e.g., Python, JavaScript, React, Communication, Leadership"}),
         }
 
     def clean(self):

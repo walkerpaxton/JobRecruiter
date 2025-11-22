@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+	<div class="d-flex justify-content-between align-items-center mb-3">
+		<div>
+			<h3 class="mb-0">
+				<i class="fas fa-lightbulb text-warning"></i> Job Recommendations for You
+			</h3>
+			<p class="text-muted mb-0">Based on your skills: {{ user_skills_count }} skill{{ user_skills_count|pluralize }} found</p>
+		</div>
+		<div>
+			<a href="{% url 'jobpostings:list' %}" class="btn btn-outline-secondary">
+				<i class="fas fa-list"></i> Browse All Jobs
+			</a>
+		</div>
+	</div>
+
+	<!-- User Skills Info -->
+	{% if user_skills %}
+	<div class="card mb-4">
+		<div class="card-body">
+			<h5 class="card-title">
+				<i class="fas fa-user-check"></i> Your Skills
+			</h5>
+			<div class="d-flex flex-wrap gap-2">
+				{% for skill in user_skills %}
+				<span class="badge bg-primary">{{ skill }}</span>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+	<!-- Recommendations -->
+	{% if recommended_jobs %}
+		<div class="alert alert-info">
+			<i class="fas fa-info-circle"></i> 
+			Found <strong>{{ recommended_jobs|length }}</strong> job{{ recommended_jobs|length|pluralize }} matching your skills 
+			(out of {{ total_jobs_analyzed }} total job{{ total_jobs_analyzed|pluralize }} analyzed).
+		</div>
+
+		<div class="list-group">
+			{% for item in recommended_jobs %}
+			{% with job=item.job score=item.score matching_skills=item.matching_skills matching_count=item.matching_skills_count %}
+			<div class="list-group-item">
+				<div class="d-flex w-100 justify-content-between">
+					<div class="flex-grow-1">
+						<div class="d-flex align-items-center gap-2 mb-2">
+							<h5 class="mb-0">{{ job.title }}</h5>
+						</div>
+						<p class="mb-1">
+							<strong>{{ job.company_name }}</strong> — 
+							{{ job.address }}{% if job.address %}, {% endif %}{{ job.location_display }}
+						</p>
+						<p class="mb-1">
+							<small class="text-muted">
+								<i class="fas fa-dollar-sign"></i> {{ job.pay_range_display }} | 
+								<i class="fas fa-briefcase"></i> {{ job.get_employment_type_display }} | 
+								<i class="fas fa-calendar"></i> {{ job.created_at|date:"M d, Y" }}
+							</small>
+						</p>
+						
+						<!-- Matching Skills -->
+						{% if matching_skills %}
+						<div class="mt-2">
+							<small class="text-muted d-block mb-1">
+								<i class="fas fa-check-circle text-success"></i> 
+								<strong>{{ matching_count }}</strong> matching skill{{ matching_count|pluralize }}:
+							</small>
+							<div class="d-flex flex-wrap gap-1">
+								{% for skill in matching_skills %}
+								<span class="badge bg-success">{{ skill }}</span>
+								{% endfor %}
+							</div>
+						</div>
+						{% endif %}
+						
+						<!-- Job Description Preview -->
+						<div class="mt-2">
+							<p class="text-muted small mb-0">
+								{{ job.description|truncatewords:30 }}
+							</p>
+						</div>
+					</div>
+					<div class="d-flex flex-column align-items-end gap-2 ms-3">
+						<div class="text-center mb-2">
+							<div class="mb-1">
+								<span class="badge bg-success" style="font-size: 1.2em; padding: 0.5em 0.75em;">
+									{{ score|floatformat:0 }}% Match
+								</span>
+							</div>
+							<div class="progress" style="width: 120px; height: 8px;">
+								<div class="progress-bar bg-success" role="progressbar" 
+								     style="width: {{ score }}%" 
+								     aria-valuenow="{{ score }}" 
+								     aria-valuemin="0" 
+								     aria-valuemax="100"></div>
+							</div>
+						</div>
+						<div class="btn-group-vertical" role="group">
+							<a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-primary btn-sm">
+								<i class="fas fa-eye"></i> View Details
+							</a>
+							{% if user.is_authenticated and user.profile.account_type == 'jobseeker' %}
+							{% if job.id not in applied_job_ids %}
+							<a href="{% url 'jobpostings:apply' job.id %}" class="btn btn-success btn-sm">
+								<i class="fas fa-paper-plane"></i> Apply Now
+							</a>
+							{% else %}
+							<button class="btn btn-secondary btn-sm" disabled>
+								<i class="fas fa-check"></i> Already Applied
+							</button>
+							{% endif %}
+							{% endif %}
+							<a href="{% url 'jobpostings:map' %}?location={{ job.address|default:job.location_display }}&job_id={{ job.id }}" 
+							   class="btn btn-outline-info btn-sm">
+								<i class="fas fa-map-marker-alt"></i> Show on Map
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endwith %}
+			{% endfor %}
+		</div>
+	{% else %}
+		<div class="alert alert-warning">
+			<i class="fas fa-exclamation-triangle"></i>
+			<strong>No recommendations found.</strong>
+			<p class="mb-0 mt-2">
+				We couldn't find any jobs matching your current skills. Try:
+			</p>
+			<ul class="mb-0 mt-2">
+				<li>Adding more skills to your profile</li>
+				<li>Checking back later for new job postings</li>
+				<li><a href="{% url 'jobpostings:list' %}">Browsing all available jobs</a></li>
+			</ul>
+		</div>
+	{% endif %}
+</div>
+
+{% endblock content %}
+

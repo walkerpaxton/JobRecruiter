@@ -1,0 +1,30 @@
+User ID,Username,Email,First Name,Last Name,Account Type,Date Joined,Last Login,Full Name,Preferred Name,Phone,City,State,LinkedIn,Company Name,Company Website,Industry,Company Size,Created At,Updated At
+3,TestEmployer,,,,employer,2025-09-23 01:28:36,2025-09-23 01:51:49,,,,,,,Coca Cola,https://www.coca-colacompany.com/about-us,Beverage,"700,000",2025-09-23 01:34:32,2025-09-23 01:34:32
+4,pchen425,,,,employer,2025-09-23 03:17:13,2025-09-23 03:37:48,,,,,,,BaceFook,,Technology,200,2025-09-23 03:17:25,2025-09-23 03:17:25
+5,paulchen,pchen425@gatech.edu,,,No Profile,2025-09-23 03:20:33,2025-09-23 03:21:13,,,,,,,,,,,
+6,walkpax,walkpax@gmail.com,,,No Profile,2025-09-23 18:07:01,2025-11-21 22:54:47,,,,,,,,,,,
+7,employer,,,,employer,2025-09-23 18:09:03,2025-11-21 22:54:14,,,,,,,Home Depot,,,,2025-09-23 18:09:06,2025-09-23 18:09:06
+9,TestUser,,,,jobseeker,2025-09-24 21:15:15,2025-10-27 02:01:54,Test User,,4044885894,Atlanta,Georgia,,,,,,2025-09-24 21:15:19,2025-09-24 21:15:19
+10,hinesharmon,hinesharmon2005@gmail.com,,,No Profile,2025-09-24 22:59:01,2025-10-27 01:43:16,,,,,,,,,,,
+11,CocaCola,,,,employer,2025-09-25 00:05:05,2025-11-21 17:20:58,,,,,,,Coca Cola,https://www.coca-colacompany.com/about-us,Beverage,700000,2025-09-25 00:05:08,2025-09-25 00:05:08
+14,sims,,,,jobseeker,2025-09-29 01:15:16,2025-11-21 17:19:47,Sims,,,Atlanta,Georgia,,,,,,2025-09-29 01:15:20,2025-09-29 01:15:20
+15,user,,,,jobseeker,2025-09-29 02:14:54,2025-09-29 02:17:29,Test,,,Atlanta,GA,,,,,,2025-09-29 02:14:58,2025-09-29 02:14:58
+16,Jack,,,,jobseeker,2025-10-21 20:23:59,2025-10-27 02:00:53,Jack,,,Atlanta,Georgia,,,,,,2025-10-21 20:24:02,2025-10-21 20:24:02
+17,pc425,,,,jobseeker,2025-10-22 19:22:21,2025-10-22 19:22:21,Paul Chen,,,Atlanta GA,,,,,,,2025-10-22 19:22:24,2025-10-22 19:22:24
+18,recruiter,,,,employer,2025-10-23 06:40:44,2025-10-23 08:29:18,,,,,,,a,https://team10-cs2340.atlassian.net/jira/software/projects/SCRUM/boards/1?sprintStarted=true,b,d,2025-10-23 06:40:50,2025-10-23 06:40:50
+19,candidate,,,,jobseeker,2025-10-23 06:46:16,2025-10-23 08:49:02,,,,,,,,,,,2025-10-23 06:46:18,2025-10-23 06:46:18
+20,candidate2,,,,jobseeker,2025-10-23 08:05:41,2025-10-23 08:05:41,,,,,,,,,,,2025-10-23 08:05:43,2025-10-23 08:05:43
+21,recruiter2,,,,employer,2025-10-23 08:14:11,2025-10-23 08:34:25,,,,,,,testing,https://github.com/walkerpaxton/JobRecruiter,testing,testing,2025-10-23 08:14:14,2025-10-23 08:14:14
+22,candidate3,,,,jobseeker,2025-10-23 08:15:30,2025-10-23 08:53:25,sharaf m kabir,,,atlanta,,,,,,,2025-10-23 08:15:34,2025-10-23 08:15:34
+23,recruiter3,,,,employer,2025-10-23 08:47:22,2025-10-23 08:52:58,,,,,,,testing3,https://github.com/walkerpaxton/JobRecruiter,testing3,testing3,2025-10-23 08:47:28,2025-10-23 08:47:28
+24,recruiter4,,,,employer,2025-10-23 08:54:46,2025-10-23 08:54:47,,,,,,,,,,,2025-10-23 08:54:48,2025-10-23 08:54:48
+25,recruiter5,sipisep200@nrlord.com,,,employer,2025-10-23 09:04:47,2025-10-23 09:04:47,,,,,,,,,,,2025-10-23 09:04:50,2025-10-23 09:04:50
+26,recruiter6,s2ddltdabl@wyoxafp.com,,,employer,2025-10-23 09:09:18,2025-10-23 09:31:34,,,,,,,test6,https://github.com/walkerpaxton/JobRecruiter,6,6,2025-10-23 09:09:22,2025-10-23 09:09:22
+27,candidate4,01jz82ezon@ibolinva.com,,,jobseeker,2025-10-23 09:10:28,2025-10-23 09:17:57,sharafkabir,,,atl,,,,,,,2025-10-23 09:10:31,2025-10-23 09:10:31
+28,Haynes,hharmon3@gatech.edu,,,jobseeker,2025-10-26 21:50:44,2025-10-26 22:00:58,Hines,,,Atlanta,Georgia,https://www.linkedin.com/in/hines-harmon-b32253235/,,,,,2025-10-26 21:50:48,2025-10-26 21:50:48
+29,phil,j@gmail.com,,,jobseeker,2025-11-21 17:05:38,2025-11-21 17:05:38,Phil,,4044885894,Atlanta,Georgia,,,,,,2025-11-21 17:05:42,2025-11-21 17:05:42
+30,TestUserWithFakeEmail,h@gmail.com,,,jobseeker,2025-11-21 17:08:53,2025-11-21 17:08:53,Justin,,,Atlanta,,,,,,,2025-11-21 17:08:56,2025-11-21 17:08:56
+31,CareerifyBot,,,,No Profile,2025-11-21 17:09:14,,,,,,,,,,,,
+32,walkerpaxton,jpaxton31@gatech.edu,,,jobseeker,2025-11-21 22:55:34,2025-11-21 22:55:34,Walker Paxton,,7707103306,Mableton,Georgia,,,,,,2025-11-21 22:55:36,2025-11-21 22:55:36
+33,paulchen1,paulchen252@gmail.com,,,jobseeker,2025-11-22 19:37:16,2025-11-22 19:37:17,Paul Chen,,5136028138,MASON,OH,,,,,,2025-11-22 19:37:21,2025-11-22 19:37:21
+34,sharafkabir,,,,No Profile,2025-11-22 21:57:09,2025-11-22 21:57:15,,,,,,,,,,,
