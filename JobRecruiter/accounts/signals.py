@@ -44,10 +44,13 @@ def notify_recruiters_on_new_candidate(sender, instance, created, **kwargs):
         # Location Check
         if search.location:
             # Get candidate location using the new fields
-            candidate_location = candidate.get_location_display()
-            if candidate_location and search.location.lower() not in candidate_location.lower():
+            c_city = candidate.city or ""
+            c_state = candidate.state or ""
+            c_address = candidate.address or ""
+            candidate_full_location = f"{c_address} {c_city} {c_state}".lower()
+            if search.location.lower() not in candidate_full_location:
                 match = False
-            elif not candidate_location:
+            elif not candidate_full_location:
                 # If candidate has no location but search requires one, no match
                 match = False
             
@@ -79,7 +82,7 @@ def notify_recruiters_on_new_candidate(sender, instance, created, **kwargs):
             msg_content = (
                 f"New Match Found! \n"
                 f"Candidate: {candidate.full_name} matches your '{search.name}' search.\n"
-                f"Location: {candidate_location}\n"
+                f"Location: {candidate.city}, {candidate.state}\n"
                 f"Skills: {candidate.technical_skills}\n"
                 f"View Profile: {profile_link}"
             )

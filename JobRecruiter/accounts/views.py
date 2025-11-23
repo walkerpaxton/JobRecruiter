@@ -156,7 +156,7 @@ def create_employer_profile_view(request):
                 return redirect('accounts.create_employer_profile')
         else:
             # Handle profile form submission
-            form = EmployerProfileForm(request.POST)
+            form = EmployerProfileForm(request.POST,request.FILES)
             if form.is_valid():
                 employer_profile = form.save(commit=False)
                 employer_profile.profile = profile
@@ -321,7 +321,11 @@ def search_candidates_view(request):
         candidates = JobSeekerProfile.objects.all()
 
         if location_query:
-            candidates = candidates.filter(location__icontains=location_query)
+           candidates = candidates.filter(
+                Q(city__icontains=location_query) | 
+                Q(state__icontains=location_query) |
+                Q(address__icontains=location_query)
+            )
 
         if keywords_query:
             # Search in technical skills, soft skills, and summary

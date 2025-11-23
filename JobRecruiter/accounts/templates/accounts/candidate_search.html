@@ -113,8 +113,13 @@
                                 </h5>
                                 <p class="text-muted mb-1 small">{{ candidate.current_job|default:"Job Seeker" }}</p>
                                 
-                                {% if candidate.has_location and candidate.show_location_to_recruiters %}
-                                    <p class="mb-1 small text-secondary"><i class="fas fa-map-marker-alt me-1"></i> {{ candidate.get_location_display }}</p>
+                                {% if candidate.show_location_to_recruiters %}
+                                    {% if candidate.city or candidate.state %}
+                                        <p class="mb-1 small text-secondary">
+                                            <i class="fas fa-map-marker-alt me-1"></i> 
+                                            {{ candidate.city|default:"" }}{% if candidate.city and candidate.state %}, {% endif %}{{ candidate.state|default:"" }}
+                                        </p>
+                                    {% endif %}
                                 {% endif %}
 
                                 {% if candidate.technical_skills and candidate.show_technical_skills_to_recruiters %}
