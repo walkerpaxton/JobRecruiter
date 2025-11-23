@@ -33,10 +33,18 @@
 						{% endif %}
 					{% endif %}
 					<p>
+						{% if is_owner %}
+							<a href="{% url 'jobpostings:candidate_recommendations' job.id %}" class="btn btn-warning me-2">
+								<i class="fas fa-user-check"></i> Find Candidates
+							</a>
+							<a href="{% url 'jobpostings:view_applicants' job.id %}" class="btn btn-info me-2">
+								<i class="fas fa-users"></i> View Applicants
+							</a>
+						{% endif %}
 						<a href="{% url 'jobpostings:map' %}?location={{ job.city|urlencode }},{{ job.state|urlencode }}&job_id={{ job.id }}" class="btn btn-outline-info">
 							<i class="fas fa-map-marker-alt"></i> Show on Map
 						</a>
-						{% if user.is_authenticated and job.posted_by_id %}
+						{% if user.is_authenticated and job.posted_by_id and not is_owner %}
 							<a href="{% url 'messaging:start_conversation' job.posted_by_id %}" class="btn btn-outline-success">
 								<i class="fas fa-envelope"></i> Message Employer
 							</a>

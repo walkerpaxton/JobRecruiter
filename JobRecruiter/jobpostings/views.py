@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.urls import reverse
@@ -182,6 +183,7 @@ def job_detail_view(request, job_id: int):
     # Check if user has already applied to this job
     has_applied = False
     is_jobseeker = False
+    is_owner = False
     if request.user.is_authenticated:
         has_applied = Application.objects.filter(job_posting=job, applicant=request.user).exists()
         try:
@@ -189,12 +191,15 @@ def job_detail_view(request, job_id: int):
             is_jobseeker = profile.account_type == 'jobseeker'
         except Profile.DoesNotExist:
             is_jobseeker = False
+        # Check if user is the owner of this job
+        is_owner = job.posted_by == request.user
     
     
     context = {
         'job': job,
         'has_applied': has_applied,
         'is_jobseeker': is_jobseeker,
+        'is_owner': is_owner,
     }
     return render(request, 'jobpostings/job_detail.html', context)
 
@@ -828,6 +833,95 @@ def application_detail_modal(request, application_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
     
+@login_required
+def candidate_recommendations_view(request, job_id):
+    """
+    Display candidate recommendations for a specific job posting.
+    Matches job seekers' skills to the job's required skills.
+    """
+    # Get the job posting
+    job = get_object_or_404(JobPosting, id=job_id, is_active=True)
+    
+    # Security Check 1: Ensure the user is an employer
+    if not request.user.profile or request.user.profile.account_type != 'employer':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('home.index')
+    
+    # Security Check 2: Ensure the employer owns this job posting
+    if job.posted_by != request.user:
+        messages.error(request, 'This is not your job posting.')
+        return redirect('jobpostings:my_posted_jobs')
+    
+    # Extract required skills from the job posting
+    job_skills = extract_skills(job.required_skills) if job.required_skills else set()
+    
+    # If no skills specified, return empty recommendations
+    if not job_skills:
+        context = {
+            'job': job,
+            'recommended_candidates': [],
+            'job_skills': [],
+            'total_candidates_analyzed': 0,
+        }
+        return render(request, 'jobpostings/candidate_recommendations.html', context)
+    
+    # Get all job seekers who have profiles
+    all_jobseekers = User.objects.filter(
+        profile__account_type='jobseeker'
+    ).select_related('profile', 'profile__jobseekerprofile')
+    
+    # Get IDs of candidates who already applied
+    applied_candidate_ids = Application.objects.filter(
+        job_posting=job
+    ).values_list('applicant_id', flat=True)
+    
+    # Filter out candidates who already applied
+    available_candidates = all_jobseekers.exclude(id__in=applied_candidate_ids)
+    
+    # Calculate recommendations
+    recommended_candidates = []
+    for candidate in available_candidates:
+        try:
+            jobseeker_profile = candidate.profile.jobseekerprofile
+        except (Profile.DoesNotExist, JobSeekerProfile.DoesNotExist):
+            continue
+        
+        # Get candidate's skills
+        candidate_skills_text = f"{jobseeker_profile.technical_skills or ''} {jobseeker_profile.soft_skills or ''}"
+        candidate_skills = extract_skills(candidate_skills_text)
+        
+        if not candidate_skills:
+            continue
+        
+        # Find matching skills
+        matching_skills = job_skills.intersection(candidate_skills)
+        
+        if matching_skills:  # At least one match
+            # Calculate match score as percentage
+            match_score = (len(matching_skills) / len(job_skills)) * 100
+            
+            recommended_candidates.append({
+                'candidate': candidate,
+                'profile': jobseeker_profile,
+                'matching_skills': sorted(matching_skills),
+                'match_count': len(matching_skills),
+                'match_score': match_score,
+                'total_job_skills': len(job_skills),
+            })
+    
+    # Sort by match score (highest first), then by number of matching skills
+    recommended_candidates.sort(key=lambda x: (x['match_score'], x['match_count']), reverse=True)
+    
+    context = {
+        'job': job,
+        'recommended_candidates': recommended_candidates,
+        'job_skills': sorted(job_skills),
+        'total_candidates_analyzed': len(available_candidates),
+    }
+    
+    return render(request, 'jobpostings/candidate_recommendations.html', context)
+
+
 @login_required
 @require_http_methods(["POST"]) # Only allow POST requests
 def move_application_stage(request, app_id):

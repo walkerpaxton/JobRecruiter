@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+	<div class="d-flex justify-content-between align-items-center mb-3">
+		<div>
+			<h3 class="mb-0">
+				<i class="fas fa-user-check text-primary"></i> Candidate Recommendations
+			</h3>
+			<p class="text-muted mb-0">For: <strong>{{ job.title }}</strong> at {{ job.company_name }}</p>
+		</div>
+		<div>
+			<a href="{% url 'jobpostings:view_applicants' job.id %}" class="btn btn-outline-secondary me-2">
+				<i class="fas fa-users"></i> View Applicants
+			</a>
+			<a href="{% url 'jobpostings:detail' job.id %}" class="btn btn-outline-secondary">
+				<i class="fas fa-arrow-left"></i> Back to Job
+			</a>
+		</div>
+	</div>
+
+	<!-- Job Skills Info -->
+	{% if job_skills %}
+	<div class="card mb-4">
+		<div class="card-body">
+			<h5 class="card-title">
+				<i class="fas fa-tasks"></i> Required Skills for This Position
+			</h5>
+			<div class="d-flex flex-wrap gap-2">
+				{% for skill in job_skills %}
+				<span class="badge bg-primary">{{ skill }}</span>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+	{% else %}
+	<div class="alert alert-warning">
+		<i class="fas fa-exclamation-triangle"></i>
+		<strong>No skills specified.</strong> Add required skills to this job posting to get candidate recommendations.
+		<a href="{% url 'jobpostings:edit' job.id %}" class="btn btn-warning btn-sm ms-2">Edit Job</a>
+	</div>
+	{% endif %}
+
+	<!-- Recommendations -->
+	{% if recommended_candidates %}
+		<div class="alert alert-info">
+			<i class="fas fa-info-circle"></i> 
+			Found <strong>{{ recommended_candidates|length }}</strong> qualified candidate{{ recommended_candidates|length|pluralize }} 
+			(out of {{ total_candidates_analyzed }} total candidate{{ total_candidates_analyzed|pluralize }} analyzed).
+		</div>
+
+		<div class="list-group">
+			{% for item in recommended_candidates %}
+			{% with candidate=item.candidate profile=item.profile score=item.match_score matching_skills=item.matching_skills matching_count=item.match_count %}
+			<div class="list-group-item">
+				<div class="d-flex w-100 justify-content-between">
+					<div class="flex-grow-1">
+						<div class="d-flex align-items-center gap-2 mb-2">
+							<h5 class="mb-0">
+								{% if profile.show_full_name_to_recruiters %}
+									{{ profile.full_name }}{% if profile.preferred_name %} ({{ profile.preferred_name }}){% endif %}
+								{% else %}
+									{{ candidate.username }}
+								{% endif %}
+							</h5>
+						</div>
+						
+						{% if profile.show_location_to_recruiters and profile.has_location %}
+						<p class="mb-1">
+							<i class="fas fa-map-marker-alt text-muted"></i> {{ profile.get_location_display }}
+						</p>
+						{% endif %}
+						
+						{% if profile.show_summary_to_recruiters and profile.summary %}
+						<p class="mb-1 text-muted small">
+							{{ profile.summary|truncatewords:30 }}
+						</p>
+						{% endif %}
+						
+						<!-- Matching Skills -->
+						{% if matching_skills %}
+						<div class="mt-2">
+							<small class="text-muted d-block mb-1">
+								<i class="fas fa-check-circle text-success"></i> 
+								<strong>{{ matching_count }}</strong> matching skill{{ matching_count|pluralize }} ({{ item.total_job_skills }} required):
+							</small>
+							<div class="d-flex flex-wrap gap-1">
+								{% for skill in matching_skills %}
+								<span class="badge bg-success">{{ skill }}</span>
+								{% endfor %}
+							</div>
+						</div>
+						{% endif %}
+						
+						<!-- Candidate Skills Preview -->
+						{% if profile.show_technical_skills_to_recruiters or profile.show_soft_skills_to_recruiters %}
+						<div class="mt-2">
+							<small class="text-muted d-block mb-1">All Skills:</small>
+							<div class="text-muted small">
+								{% if profile.show_technical_skills_to_recruiters and profile.technical_skills %}
+									<strong>Technical:</strong> {{ profile.technical_skills|truncatewords:15 }}
+								{% endif %}
+								{% if profile.show_soft_skills_to_recruiters and profile.soft_skills %}
+									{% if profile.show_technical_skills_to_recruiters and profile.technical_skills %} | {% endif %}
+									<strong>Soft:</strong> {{ profile.soft_skills|truncatewords:15 }}
+								{% endif %}
+							</div>
+						</div>
+						{% endif %}
+					</div>
+					<div class="d-flex flex-column align-items-end gap-2 ms-3">
+						<div class="text-center mb-2">
+							<div class="mb-1">
+								<span class="badge bg-success" style="font-size: 1.2em; padding: 0.5em 0.75em;">
+									{{ score|floatformat:0 }}% Match
+								</span>
+							</div>
+							<div class="progress" style="width: 120px; height: 8px;">
+								<div class="progress-bar bg-success" role="progressbar" 
+								     style="width: {{ score }}%" 
+								     aria-valuenow="{{ score }}" 
+								     aria-valuemin="0" 
+								     aria-valuemax="100"></div>
+							</div>
+						</div>
+						<div class="btn-group-vertical" role="group">
+							<a href="{% url 'accounts.public_profile' candidate.id %}" class="btn btn-primary btn-sm">
+								<i class="fas fa-user"></i> View Profile
+							</a>
+							{% if profile.show_resume_to_recruiters and profile.resume %}
+							<a href="{{ profile.resume.url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+								<i class="fas fa-file-pdf"></i> View Resume
+							</a>
+							{% endif %}
+							<a href="{% url 'messaging:start_conversation' candidate.id %}" class="btn btn-success btn-sm">
+								<i class="fas fa-envelope"></i> Message
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endwith %}
+			{% endfor %}
+		</div>
+	{% else %}
+		<div class="alert alert-warning">
+			<i class="fas fa-exclamation-triangle"></i>
+			<strong>No recommendations found.</strong>
+			<p class="mb-0 mt-2">
+				We couldn't find any candidates matching the required skills for this position. This could be because:
+			</p>
+			<ul class="mb-0 mt-2">
+				<li>No candidates have the required skills in their profiles</li>
+				<li>All matching candidates have already applied</li>
+				<li>Try adjusting the required skills or checking back later</li>
+			</ul>
+		</div>
+	{% endif %}
+</div>
+{% endblock content %}
+
